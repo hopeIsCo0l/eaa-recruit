@@ -10,13 +10,13 @@ EAA Recruit is an AI-powered platform designed to automate high-volume recruitme
 
 ### Key Features
 
-- ** Document Processing**: Supports PDF, DOCX, and TXT formats for job descriptions and resumes
-- ** Text Preprocessing**: Advanced text cleaning, tokenization, stopword removal, and stemming
-- ** Skill Extraction**: TF-IDF (Term Frequency-Inverse Document Frequency) based skill extraction
-- ** Similarity Scoring**: Cosine Similarity for objective candidate ranking
-- ** Explainable Results**: Detailed reports with top matching terms for each candidate
-- ** Modern Web Interface**: React-based frontend with FastAPI backend
-- ** Docker Support**: Containerized deployment with Docker Compose
+- **Document Processing**: Supports PDF, DOCX, and TXT formats for job descriptions and resumes
+- **Text Preprocessing**: Advanced text cleaning, tokenization, stopword removal, and stemming
+- **Skill Extraction**: TF-IDF (Term Frequency-Inverse Document Frequency) based skill extraction
+- **Similarity Scoring**: Cosine Similarity for objective candidate ranking
+- **Explainable Results**: Detailed reports with top matching terms for each candidate
+- **Modern Web Interface**: React-based frontend with FastAPI backend
+- **Docker Support**: Containerized deployment with Docker Compose
 
 ##  Architecture
 
