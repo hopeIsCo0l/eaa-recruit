@@ -15,28 +15,63 @@ EAA Recruit is an AI-powered platform designed to automate high-volume recruitme
 - **🎯 Skill Extraction**: TF-IDF (Term Frequency-Inverse Document Frequency) based skill extraction
 - **📊 Similarity Scoring**: Cosine Similarity for objective candidate ranking
 - **📈 Explainable Results**: Detailed reports with top matching terms for each candidate
-- **🌐 Web Interface**: User-friendly Flask-based web application
-- **💻 CLI Tool**: Command-line interface for batch processing
+- **🌐 Modern Web Interface**: React-based frontend with FastAPI backend
+- **🐳 Docker Support**: Containerized deployment with Docker Compose
 
 ## 🏗️ Architecture
 
-The system consists of several key components:
+### Project Structure
 
-1. **Text Preprocessor**: Cleans and normalizes text data
-2. **Skill Extractor**: Extracts relevant skills and terms using TF-IDF
-3. **Similarity Scorer**: Calculates cosine similarity between job descriptions and resumes
-4. **Report Generator**: Creates comprehensive, explainable ranking reports
-5. **Document Parser**: Handles multiple document formats (PDF, DOCX, TXT)
-6. **Recruitment Engine**: Orchestrates the entire recruitment process
+```
+eaa-recruit/
+├── backend/                # FastAPI Backend
+│   ├── app/
+│   │   ├── main.py        # FastAPI application entry point
+│   │   ├── routers/       # API route handlers
+│   │   ├── models/        # Business logic models
+│   │   ├── schemas/       # Pydantic schemas for validation
+│   │   ├── services/      # Service layer
+│   │   └── database.py    # Database configuration
+│   ├── requirements.txt   # Python dependencies
+│   └── Dockerfile         # Backend Docker configuration
+├── frontend/              # React Frontend
+│   ├── src/              # React source code
+│   ├── public/           # Static assets
+│   ├── package.json      # Node.js dependencies
+│   └── Dockerfile        # Frontend Docker configuration
+├── docker-compose.yml    # Docker Compose configuration
+├── .gitignore
+└── README.md
+```
 
-## 🚀 Installation
+### Technology Stack
+
+**Backend:**
+- FastAPI - Modern Python web framework
+- scikit-learn - Machine learning (TF-IDF, Cosine Similarity)
+- NLTK - Natural language processing
+- Pydantic - Data validation
+- Uvicorn - ASGI server
+
+**Frontend:**
+- React - JavaScript library for building UI
+- Axios - HTTP client for API calls
+- CSS3 - Modern styling
+
+**Deployment:**
+- Docker - Containerization
+- Docker Compose - Multi-container orchestration
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- pip package manager
+- Docker and Docker Compose (recommended)
+- OR
+- Python 3.11+ (for backend development)
+- Node.js 18+ (for frontend development)
 
-### Setup
+### Option 1: Using Docker (Recommended)
 
 1. Clone the repository:
 ```bash
@@ -44,7 +79,26 @@ git clone https://github.com/hopeIsCo0l/eaa-recruit.git
 cd eaa-recruit
 ```
 
-2. Create a virtual environment (recommended):
+2. Build and start the containers:
+```bash
+docker-compose up --build
+```
+
+3. Access the application:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+### Option 2: Manual Setup
+
+#### Backend Setup
+
+1. Navigate to backend directory:
+```bash
+cd backend
+```
+
+2. Create virtual environment:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -55,164 +109,152 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Download required NLTK data (automatically done on first run):
+4. Download NLTK data:
 ```python
-import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
+python -c "import nltk; nltk.download('punkt_tab'); nltk.download('stopwords')"
 ```
+
+5. Run the backend:
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Frontend Setup
+
+1. Navigate to frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Create .env file:
+```bash
+echo "REACT_APP_API_URL=http://localhost:8000/api" > .env
+```
+
+4. Start development server:
+```bash
+npm start
+```
+
+The application will open at http://localhost:3000
 
 ## 📖 Usage
 
-### Web Application
+### Web Interface
 
-1. Start the Flask server:
-```bash
-python -m app.main
-```
+1. **Upload Job Description**: 
+   - Click on the job description upload area
+   - Select a PDF, DOCX, or TXT file containing the job requirements
+   - Click "Process Job Description"
 
-2. Open your browser and navigate to:
-```
-http://localhost:5000
-```
+2. **Upload Candidate Resumes**:
+   - After job description is processed, upload multiple resume files
+   - Supported formats: PDF, DOCX, TXT
+   - Click "Rank Candidates"
 
-3. Follow the web interface:
-   - **Step 1**: Upload a job description file (PDF, DOCX, or TXT)
-   - **Step 2**: Upload candidate resume files (multiple files supported)
-   - **View Results**: See ranked candidates with match scores and top matching terms
+3. **View Results**:
+   - See ranked candidates with match percentages
+   - View top matching terms for each candidate
+   - Understand why candidates were ranked in that order
 
-### Command-Line Interface
+### API Endpoints
 
-For batch processing or automation:
-
-```bash
-python cli.py --job data/job_description.txt \
-              --resumes data/resume_candidate1.txt data/resume_candidate2.txt data/resume_candidate3.txt \
-              --output ranking_report.json \
-              --text-output ranking_report.txt
-```
-
-### Python API
-
-You can also use the recruitment engine programmatically:
-
-```python
-from app.models.recruitment_engine import RecruitmentEngine
-
-# Initialize engine
-engine = RecruitmentEngine()
-
-# Process job description
-job_text = "Your job description here..."
-engine.process_job_description(job_text)
-
-# Prepare resumes
-resumes = [
-    {'id': 'candidate1.pdf', 'text': 'Resume text...'},
-    {'id': 'candidate2.pdf', 'text': 'Resume text...'},
-]
-
-# Rank candidates
-result = engine.rank_candidates(resumes)
-print(result['text_report'])
-```
-
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-python -m pytest tests/
-```
-
-Or using unittest:
-
-```bash
-python -m unittest discover tests
-```
-
-## 📊 Sample Data
-
-The repository includes sample data in the `data/` directory:
-
-- `job_description.txt`: Sample job posting for a Senior Python Developer
-- `resume_candidate1.txt`: Highly relevant candidate (Python + ML experience)
-- `resume_candidate2.txt`: Less relevant candidate (Java developer)
-- `resume_candidate3.txt`: Moderately relevant candidate (Data Science background)
-
-Test with sample data:
-
-```bash
-python cli.py --job data/job_description.txt \
-              --resumes data/resume_candidate*.txt
-```
+- `GET /` - API information
+- `GET /health` - Health check
+- `POST /api/upload-job` - Upload job description
+- `POST /api/upload-resumes` - Upload and rank resumes
+- `GET /docs` - Interactive API documentation (Swagger UI)
 
 ## 🔧 Technical Details
 
-### Machine Learning Techniques
+### Machine Learning Pipeline
 
-1. **TF-IDF (Term Frequency-Inverse Document Frequency)**
-   - Extracts important terms from documents
-   - Weighs terms by their frequency and uniqueness
-   - Captures both single words and bi-grams (two-word phrases)
-
-2. **Cosine Similarity**
-   - Measures similarity between job descriptions and resumes
-   - Produces scores between 0 (no match) and 1 (perfect match)
-   - Language-agnostic and efficient
-
-3. **Text Preprocessing**
+1. **Text Preprocessing**:
    - Lowercasing and normalization
-   - Removal of stopwords (common words like "the", "is", etc.)
-   - Stemming to reduce words to their root form
    - Special character and URL removal
+   - Tokenization using NLTK
+   - Stopword removal
+   - Porter Stemming
 
-### Project Structure
+2. **Feature Extraction**:
+   - TF-IDF vectorization
+   - Unigrams and bigrams (1-2 word phrases)
+   - Maximum 100 features
+   - Captures skill terms and phrases
 
+3. **Similarity Scoring**:
+   - Cosine similarity between job and resume vectors
+   - Scores range from 0 (no match) to 1 (perfect match)
+   - Converted to percentages for readability
+
+4. **Ranking & Reporting**:
+   - Candidates sorted by similarity score
+   - Top matching terms extracted for each candidate
+   - Detailed reports with explanations
+
+## 🔒 Security
+
+- File type validation
+- File size limits (16MB max)
+- Secure filename handling
+- No sensitive data storage
+- Environment-based configuration
+- CORS configuration for production
+- All dependencies up-to-date and vulnerability-free
+
+See [SECURITY.md](SECURITY.md) for detailed security information.
+
+## 🧪 Development
+
+### Running Tests
+
+```bash
+cd backend
+python -m pytest tests/
 ```
-eaa-recruit/
-├── app/
-│   ├── models/
-│   │   └── recruitment_engine.py    # Main orchestration engine
-│   ├── utils/
-│   │   ├── text_preprocessor.py     # Text cleaning and normalization
-│   │   ├── skill_extractor.py       # TF-IDF skill extraction
-│   │   ├── similarity_scorer.py     # Cosine similarity calculation
-│   │   ├── report_generator.py      # Report generation
-│   │   └── document_parser.py       # File parsing (PDF, DOCX, TXT)
-│   ├── templates/
-│   │   └── index.html               # Web interface
-│   └── main.py                      # Flask application
-├── tests/
-│   └── test_recruitment_engine.py   # Unit tests
-├── data/
-│   ├── job_description.txt          # Sample job description
-│   └── resume_candidate*.txt        # Sample resumes
-├── cli.py                           # Command-line interface
-├── requirements.txt                 # Python dependencies
-└── README.md                        # This file
+
+### API Development
+
+The FastAPI backend includes:
+- Automatic API documentation at `/docs`
+- Request/response validation with Pydantic
+- Type hints throughout
+- Modular router structure
+
+### Frontend Development
+
+The React frontend uses:
+- Functional components with hooks
+- Axios for API communication
+- Modern CSS with flexbox/grid
+- Responsive design
+
+## 📦 Deployment
+
+### Production Deployment with Docker
+
+1. Update docker-compose.yml for production:
+   - Set appropriate CORS origins
+   - Use production API URLs
+   - Configure environment variables
+
+2. Build and deploy:
+```bash
+docker-compose -f docker-compose.yml up -d
 ```
 
-## 🎯 Features in Detail
+### Environment Variables
 
-### Explainable AI
+**Backend:**
+- `PYTHONUNBUFFERED=1` - Python output buffering
 
-The system provides transparency through:
-- **Similarity Scores**: Numerical scores showing how well each candidate matches
-- **Top Matching Terms**: The specific skills/terms that led to the ranking
-- **Relevance Weights**: TF-IDF scores showing term importance
-
-### Scalability
-
-- Processes multiple resumes simultaneously
-- Efficient sparse matrix operations
-- Suitable for high-volume recruitment scenarios
-
-### Flexibility
-
-- Multiple document format support (PDF, DOCX, TXT)
-- Configurable parameters (max features, n-gram ranges)
-- Both web interface and CLI for different use cases
+**Frontend:**
+- `REACT_APP_API_URL` - Backend API URL
 
 ## 🤝 Contributing
 
@@ -237,3 +279,7 @@ This project is developed as part of academic requirements at Addis Ababa Univer
 ## 📧 Contact
 
 For questions or feedback about this project, please contact the development team through the university.
+
+---
+
+**Built with ❤️ for Ethiopian Airlines**
