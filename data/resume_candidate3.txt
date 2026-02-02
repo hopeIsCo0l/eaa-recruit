@@ -1,0 +1,70 @@
+RESUME
+
+Dawit Tesfaye
+dawit.tesfaye@email.com | +251-933-456789
+Addis Ababa, Ethiopia
+
+OBJECTIVE:
+Data Scientist with 4 years of experience seeking to leverage machine learning and Python programming skills to solve challenging problems in the aviation industry. Passionate about using data to drive business decisions.
+
+CORE COMPETENCIES:
+• Python Programming (pandas, numpy, scikit-learn)
+• Machine Learning (supervised and unsupervised learning)
+• Data Analysis and Visualization (matplotlib, seaborn, Tableau)
+• Statistical Analysis and Predictive Modeling
+• SQL and Database Management
+• Feature Engineering and Model Optimization
+• Cloud Computing (AWS basics)
+
+PROFESSIONAL EXPERIENCE:
+
+Data Scientist | Analytics Hub Ethiopia (2021 - Present)
+• Developed machine learning models for customer segmentation and churn prediction
+• Performed exploratory data analysis on datasets with millions of records
+• Created data visualizations and dashboards for stakeholder presentations
+• Implemented feature engineering techniques improving model accuracy by 15%
+• Used Python (pandas, numpy, scikit-learn) for all data analysis tasks
+• Collaborated with engineering team to deploy models to production
+• Applied statistical methods for A/B testing and experiment analysis
+
+Data Analyst | Research Institute Ethiopia (2019 - 2021)
+• Analyzed large datasets using Python and SQL
+• Built predictive models for economic forecasting
+• Generated automated reports using Python scripts
+• Performed data cleaning and preprocessing
+• Visualized data insights using matplotlib and seaborn
+• Assisted in machine learning project implementations
+
+EDUCATION:
+Master's in Data Science
+Ethiopian Institute of Technology, 2019
+Thesis: "Predictive Modeling for Flight Operations"
+
+Bachelor of Science in Mathematics
+Addis Ababa University, 2017
+
+TECHNICAL PROJECTS:
+• Airline Route Optimization: ML model for route planning (Python, scikit-learn)
+• Sales Forecasting System: Time series analysis for retail predictions
+• Customer Sentiment Analysis: NLP project using Python and TensorFlow
+• Data Pipeline Automation: ETL processes using Python and PostgreSQL
+
+CERTIFICATIONS & TRAINING:
+• Machine Learning by Stanford University (Coursera)
+• Python for Data Science (DataCamp)
+• AWS Machine Learning Specialty (in progress)
+• Data Science Professional Certificate
+
+PUBLICATIONS:
+• "Machine Learning Applications in Aviation" - Conference Paper, 2022
+
+SKILLS SUMMARY:
+Programming: Python (Advanced), SQL (Advanced), R (Intermediate)
+ML Libraries: scikit-learn, TensorFlow (Basic), Keras (Basic)
+Data Tools: Jupyter, pandas, numpy, matplotlib
+Databases: PostgreSQL, MySQL, MongoDB (Basic)
+Version Control: Git, GitHub
+Cloud: AWS (EC2, S3)
+
+LANGUAGES:
+Amharic (Native), English (Fluent), French (Basic)

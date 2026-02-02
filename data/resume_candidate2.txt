@@ -1,0 +1,62 @@
+CURRICULUM VITAE
+
+Personal Information:
+Name: Sarah Mohammed
+Email: sarah.mohammed@email.com
+Phone: +251-922-345678
+Location: Addis Ababa, Ethiopia
+
+Professional Summary:
+Java Developer with 5 years of experience in enterprise application development. Skilled in building scalable backend systems, microservices architecture, and database optimization. Strong knowledge of Spring Framework and RESTful web services.
+
+Skills:
+- Programming Languages: Java, SQL, JavaScript, HTML/CSS
+- Frameworks: Spring Boot, Spring MVC, Hibernate, JPA
+- Databases: Oracle, MySQL, PostgreSQL
+- Tools: Maven, Jenkins, Git, IntelliJ IDEA
+- Web Services: REST, SOAP, JSON, XML
+- Testing: JUnit, Mockito, Selenium
+- Cloud: Basic AWS knowledge
+
+Work Experience:
+
+Senior Java Developer | Enterprise Systems Ltd.
+March 2020 - Present
+- Developed enterprise applications using Spring Boot and microservices architecture
+- Designed and implemented RESTful APIs for client integrations
+- Optimized database queries improving performance by 30%
+- Led team of 3 junior developers in delivering banking applications
+- Implemented security features using Spring Security and OAuth2
+
+Java Developer | Software House Ethiopia
+July 2018 - February 2020
+- Built web applications using Spring MVC and Hibernate
+- Developed SOAP and REST web services for third-party integrations
+- Performed database design and optimization for Oracle databases
+- Participated in Agile development process with bi-weekly sprints
+- Wrote unit tests achieving 80% code coverage
+
+Junior Developer | Tech Start Ethiopia
+January 2017 - June 2018
+- Assisted in developing Java-based applications
+- Learned Spring Framework and database management
+- Fixed bugs and performed code maintenance
+- Collaborated with senior developers on various projects
+
+Education:
+Bachelor of Science in Computer Science
+Addis Ababa University, 2016
+
+Projects:
+- Banking Transaction System: Developed core banking module using Spring Boot
+- Inventory Management: Created warehouse management system for retail
+- E-commerce Platform: Built online shopping platform with payment integration
+
+Certifications:
+- Oracle Certified Professional, Java SE 11 Developer
+- Spring Professional Certification
+- AWS Cloud Practitioner
+
+Languages:
+- Amharic (Native)
+- English (Fluent)

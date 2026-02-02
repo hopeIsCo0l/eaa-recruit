@@ -6,6 +6,19 @@ __pycache__/
 # C extensions
 *.so
 
+# Node modules and React build
+node_modules/
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Distribution / packaging
 .Python
 build/

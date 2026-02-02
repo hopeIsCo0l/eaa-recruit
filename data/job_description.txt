@@ -1,0 +1,48 @@
+POSITION: Senior Python Developer with Machine Learning Experience
+
+COMPANY: Ethiopian Airlines Group
+DEPARTMENT: Information Technology - Data Science Team
+
+JOB DESCRIPTION:
+
+We are seeking a highly skilled Senior Python Developer with strong expertise in Machine Learning and Data Science. The ideal candidate will be responsible for developing and deploying AI-powered applications to support our airline operations and customer service initiatives.
+
+KEY RESPONSIBILITIES:
+- Design, develop, and maintain Python-based applications
+- Implement machine learning models for predictive analytics
+- Work with large datasets to extract meaningful insights
+- Collaborate with cross-functional teams to deliver data-driven solutions
+- Optimize algorithms for performance and scalability
+- Deploy models to production environments using cloud platforms
+
+REQUIRED QUALIFICATIONS:
+- Bachelor's or Master's degree in Computer Science, Software Engineering, or related field
+- 5+ years of experience in Python programming
+- Strong knowledge of machine learning frameworks (TensorFlow, PyTorch, scikit-learn)
+- Experience with data preprocessing and feature engineering
+- Proficiency in SQL and database management
+- Understanding of RESTful APIs and microservices architecture
+- Experience with version control systems (Git)
+
+PREFERRED SKILLS:
+- Experience with cloud platforms (AWS, Azure, or GCP)
+- Knowledge of Docker and container orchestration
+- Familiarity with big data technologies (Spark, Hadoop)
+- Experience in the aviation or transportation industry
+- Strong problem-solving and analytical skills
+- Excellent communication and teamwork abilities
+
+TECHNICAL REQUIREMENTS:
+- Python 3.x
+- Machine Learning: TensorFlow, Keras, PyTorch, scikit-learn
+- Data Analysis: pandas, numpy, matplotlib, seaborn
+- Databases: PostgreSQL, MongoDB
+- Cloud: AWS (preferred)
+- Tools: Jupyter, Git, Docker
+
+LOCATION: Addis Ababa, Ethiopia
+EMPLOYMENT TYPE: Full-time
+SALARY: Competitive, based on experience
+
+TO APPLY:
+Please submit your resume highlighting your Python and machine learning experience.
