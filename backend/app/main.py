@@ -6,7 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
-from app.routers import recruitment
+from app.routers import recruitment, auth, admin
+from app.database import engine, Base
+from app.models.user import User  # Import to register model
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="EAA Recruit API",
@@ -25,6 +30,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(recruitment.router, prefix="/api", tags=["recruitment"])
+app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
 
 @app.get("/")
