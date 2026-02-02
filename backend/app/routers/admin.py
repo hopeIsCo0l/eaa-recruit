@@ -101,7 +101,7 @@ async def update_user(
     
     # Convert role string to enum if present
     if "role" in update_data and update_data["role"]:
-        update_data["role"] = ModelUserRole(update_data["role"].value)
+        update_data["role"] = ModelUserRole(update_data["role"])
     
     for field, value in update_data.items():
         setattr(user, field, value)

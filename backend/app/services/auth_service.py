@@ -2,7 +2,8 @@
 Authentication service for user management.
 """
 import os
-from datetime import datetime, timedelta
+import warnings
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -15,7 +16,14 @@ from app.models.user import User, UserRole
 from app.schemas.auth import TokenData
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "eaa-recruit-secret-key-change-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    SECRET_KEY = "eaa-recruit-secret-key-change-in-production"
+    warnings.warn(
+        "SECRET_KEY environment variable is not set. Using insecure default. "
+        "Set SECRET_KEY in production!",
+        UserWarning
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
@@ -36,7 +44,7 @@ def get_password_hash(password: str) -> str:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT access token."""
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
