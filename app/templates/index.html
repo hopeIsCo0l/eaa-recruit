@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EAA Recruit - AI-Powered Recruitment Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background: white;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9fa;
+        }
+        
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .results.visible {
+            display: block;
+        }
+        
+        .candidate-card {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .candidate-rank {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .match-score {
+            font-size: 1.2em;
+            color: #28a745;
+            margin: 10px 0;
+        }
+        
+        .matching-terms {
+            margin-top: 15px;
+        }
+        
+        .term-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 0.9em;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.visible {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛫 EAA Recruit</h1>
+            <p>AI-Powered Recruitment Automation for Ethiopian Airlines</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Automated Candidate Ranking using TF-IDF & Cosine Similarity</p>
+        </div>
+        
+        <div class="content">
+            <!-- Step 1: Upload Job Description -->
+            <div class="section">
+                <h2>Step 1: Upload Job Description</h2>
+                <p style="margin-bottom: 20px; color: #666;">Upload the job description file (PDF, DOCX, or TXT)</p>
+                
+                <div class="upload-area" onclick="document.getElementById('job-file').click()">
+                    <div class="upload-icon">📄</div>
+                    <p><strong>Click to upload job description</strong></p>
+                    <p style="color: #999; margin-top: 5px;">Supported formats: PDF, DOCX, TXT</p>
+                    <input type="file" id="job-file" accept=".pdf,.docx,.doc,.txt">
+                </div>
+                
+                <div id="job-message"></div>
+                <button class="btn" id="upload-job-btn" onclick="uploadJob()" disabled>Process Job Description</button>
+            </div>
+            
+            <!-- Step 2: Upload Resumes -->
+            <div class="section">
+                <h2>Step 2: Upload Candidate Resumes</h2>
+                <p style="margin-bottom: 20px; color: #666;">Upload multiple resume files for ranking</p>
+                
+                <div class="upload-area" onclick="document.getElementById('resume-files').click()">
+                    <div class="upload-icon">📋</div>
+                    <p><strong>Click to upload resumes</strong></p>
+                    <p style="color: #999; margin-top: 5px;">Multiple files accepted • PDF, DOCX, TXT</p>
+                    <input type="file" id="resume-files" accept=".pdf,.docx,.doc,.txt" multiple>
+                </div>
+                
+                <div id="resume-message"></div>
+                <button class="btn" id="upload-resumes-btn" onclick="uploadResumes()" disabled>Rank Candidates</button>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; color: #667eea;">Processing...</p>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="results" id="results">
+                <h2>🎯 Candidate Rankings</h2>
+                <div id="results-content"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let jobUploaded = false;
+        
+        // Enable/disable upload job button when file is selected
+        document.getElementById('job-file').addEventListener('change', function() {
+            const btn = document.getElementById('upload-job-btn');
+            btn.disabled = !this.files.length;
+        });
+        
+        // Enable/disable upload resumes button when files are selected
+        document.getElementById('resume-files').addEventListener('change', function() {
+            const btn = document.getElementById('upload-resumes-btn');
+            btn.disabled = !this.files.length || !jobUploaded;
+        });
+        
+        function showMessage(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="message ${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+        
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            loading.className = show ? 'loading visible' : 'loading';
+        }
+        
+        async function uploadJob() {
+            const fileInput = document.getElementById('job-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('job-message', 'Please select a file', true);
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('job_file', file);
+            
+            showLoading(true);
+            document.getElementById('upload-job-btn').disabled = true;
+            
+            try {
+                const response = await fetch('/upload_job', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('job-message', '✅ Job description processed successfully!');
+                    jobUploaded = true;
+                    document.getElementById('upload-resumes-btn').disabled = false;
+                } else {
+                    showMessage('job-message', '❌ Error: ' + data.error, true);
+                    document.getElementById('upload-job-btn').disabled = false;
+                }
+            } catch (error) {
+                showMessage('job-message', '❌ Error: ' + error.message, true);
+                document.getElementById('upload-job-btn').disabled = false;
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function uploadResumes() {
+            const fileInput = document.getElementById('resume-files');
+            const files = fileInput.files;
+            
+            if (!files.length) {
+                showMessage('resume-message', 'Please select resume files', true);
+                return;
+            }
+            
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('resume_files', files[i]);
+            }
+            
+            showLoading(true);
+            document.getElementById('upload-resumes-btn').disabled = true;
+            
+            try {
+                const response = await fetch('/upload_resumes', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('resume-message', `✅ Processed ${files.length} resumes successfully!`);
+                    displayResults(data.report);
+                } else {
+                    showMessage('resume-message', '❌ Error: ' + data.error, true);
+                    document.getElementById('upload-resumes-btn').disabled = false;
+                }
+            } catch (error) {
+                showMessage('resume-message', '❌ Error: ' + error.message, true);
+                document.getElementById('upload-resumes-btn').disabled = false;
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function displayResults(report) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('results-content');
+            
+            let html = '<div style="margin-bottom: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px;">';
+            html += '<h3>📊 Summary</h3>';
+            html += `<p><strong>Total Candidates:</strong> ${report.total_candidates}</p>`;
+            html += `<p><strong>Timestamp:</strong> ${new Date(report.timestamp).toLocaleString()}</p>`;
+            html += '</div>';
+            
+            report.candidates.forEach(candidate => {
+                html += '<div class="candidate-card">';
+                html += `<div class="candidate-rank">Rank #${candidate.rank}</div>`;
+                html += `<p><strong>Candidate:</strong> ${candidate.candidate_id}</p>`;
+                html += `<div class="match-score">Match Score: ${candidate.match_percentage}%</div>`;
+                html += `<p style="color: #666;">Similarity Score: ${candidate.similarity_score}</p>`;
+                
+                if (candidate.top_matching_terms.length > 0) {
+                    html += '<div class="matching-terms">';
+                    html += '<p><strong>Top Matching Terms:</strong></p>';
+                    candidate.top_matching_terms.slice(0, 5).forEach(term => {
+                        html += `<span class="term-tag">${term.term} (${term.relevance.toFixed(3)})</span>`;
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+            });
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.className = 'results visible';
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

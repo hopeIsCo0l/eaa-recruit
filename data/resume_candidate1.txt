@@ -1,0 +1,66 @@
+RESUME
+
+Name: Abebe Kebede
+Email: abebe.kebede@email.com
+Phone: +251-911-234567
+Location: Addis Ababa, Ethiopia
+
+PROFESSIONAL SUMMARY:
+Experienced Python Developer with 6 years of expertise in machine learning, data science, and software development. Proven track record of building scalable AI-powered applications and implementing predictive models. Strong background in developing solutions for enterprise applications.
+
+TECHNICAL SKILLS:
+- Programming: Python, SQL, JavaScript
+- Machine Learning: TensorFlow, PyTorch, scikit-learn, Keras
+- Data Science: pandas, numpy, matplotlib, seaborn, scipy
+- Databases: PostgreSQL, MySQL, MongoDB
+- Cloud Platforms: AWS (EC2, S3, Lambda, SageMaker)
+- Tools: Git, Docker, Jupyter Notebook, VS Code
+- Frameworks: Flask, Django, FastAPI
+
+PROFESSIONAL EXPERIENCE:
+
+Senior Python Developer | Tech Solutions Ethiopia
+January 2021 - Present
+- Developed machine learning models for customer behavior prediction with 85% accuracy
+- Built data pipelines processing 1M+ records daily using Python and AWS
+- Implemented RESTful APIs for model deployment using Flask
+- Collaborated with cross-functional teams to deliver 10+ data science projects
+- Optimized algorithm performance reducing processing time by 40%
+
+Python Developer | DataWorks Africa
+June 2018 - December 2020
+- Created predictive analytics models using scikit-learn and TensorFlow
+- Performed data preprocessing and feature engineering for large datasets
+- Developed automated reporting systems using Python and pandas
+- Worked with SQL databases for data extraction and analysis
+- Participated in code reviews and maintained version control with Git
+
+Junior Software Developer | Ethiopian Software Solutions
+March 2017 - May 2018
+- Developed Python scripts for data analysis and automation
+- Assisted in building web applications using Django
+- Performed unit testing and debugging
+- Learned machine learning fundamentals and applied them to real projects
+
+EDUCATION:
+Master of Science in Computer Science
+Addis Ababa University, 2017
+Focus: Machine Learning and Artificial Intelligence
+
+Bachelor of Science in Software Engineering
+Addis Ababa University, 2015
+
+PROJECTS:
+- Flight Delay Prediction System: Built ML model predicting flight delays with 82% accuracy
+- Customer Churn Analysis: Developed predictive model for customer retention
+- Automated Resume Screening: Created NLP-based system for candidate evaluation
+
+CERTIFICATIONS:
+- AWS Certified Solutions Architect - Associate
+- TensorFlow Developer Certificate
+- Machine Learning Specialization (Coursera)
+
+LANGUAGES:
+- Amharic (Native)
+- English (Fluent)
+- Python (Expert)
