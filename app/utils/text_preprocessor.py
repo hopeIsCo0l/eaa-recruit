@@ -10,9 +10,9 @@ from nltk.stem import PorterStemmer
 
 # Download required NLTK data
 try:
-    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('tokenizers/punkt_tab')
 except LookupError:
-    nltk.download('punkt', quiet=True)
+    nltk.download('punkt_tab', quiet=True)
 
 try:
     nltk.data.find('corpora/stopwords')
