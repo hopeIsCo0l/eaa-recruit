@@ -1,24 +1,24 @@
-# 🛫 EAA Recruit
+#  EAA Recruit
 
 AI-Powered Recruitment Automation Platform for Ethiopian Airlines and Ethiopian Aviation Academy
 
 **Final Year Project - Addis Ababa University, Software Engineering**
 
-## 📋 Overview
+##  Overview
 
 EAA Recruit is an AI-powered platform designed to automate high-volume recruitment for Ethiopian Airlines. The system leverages machine learning techniques to objectively rank candidates based on their resumes against job descriptions, providing explainable results.
 
 ### Key Features
 
-- **📄 Document Processing**: Supports PDF, DOCX, and TXT formats for job descriptions and resumes
-- **🔤 Text Preprocessing**: Advanced text cleaning, tokenization, stopword removal, and stemming
-- **🎯 Skill Extraction**: TF-IDF (Term Frequency-Inverse Document Frequency) based skill extraction
-- **📊 Similarity Scoring**: Cosine Similarity for objective candidate ranking
-- **📈 Explainable Results**: Detailed reports with top matching terms for each candidate
-- **🌐 Modern Web Interface**: React-based frontend with FastAPI backend
-- **🐳 Docker Support**: Containerized deployment with Docker Compose
+- ** Document Processing**: Supports PDF, DOCX, and TXT formats for job descriptions and resumes
+- ** Text Preprocessing**: Advanced text cleaning, tokenization, stopword removal, and stemming
+- ** Skill Extraction**: TF-IDF (Term Frequency-Inverse Document Frequency) based skill extraction
+- ** Similarity Scoring**: Cosine Similarity for objective candidate ranking
+- ** Explainable Results**: Detailed reports with top matching terms for each candidate
+- ** Modern Web Interface**: React-based frontend with FastAPI backend
+- ** Docker Support**: Containerized deployment with Docker Compose
 
-## 🏗️ Architecture
+##  Architecture
 
 ### Project Structure
 
@@ -62,7 +62,7 @@ eaa-recruit/
 - Docker - Containerization
 - Docker Compose - Multi-container orchestration
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -143,7 +143,7 @@ npm start
 
 The application will open at http://localhost:3000
 
-## 📖 Usage
+##  Usage
 
 ### Web Interface
 
@@ -170,7 +170,7 @@ The application will open at http://localhost:3000
 - `POST /api/upload-resumes` - Upload and rank resumes
 - `GET /docs` - Interactive API documentation (Swagger UI)
 
-## 🔧 Technical Details
+##  Technical Details
 
 ### Machine Learning Pipeline
 
@@ -197,7 +197,7 @@ The application will open at http://localhost:3000
    - Top matching terms extracted for each candidate
    - Detailed reports with explanations
 
-## 🔒 Security
+##  Security
 
 - File type validation
 - File size limits (16MB max)
@@ -209,7 +209,7 @@ The application will open at http://localhost:3000
 
 See [SECURITY.md](SECURITY.md) for detailed security information.
 
-## 🧪 Development
+##  Development
 
 ### Running Tests
 
@@ -234,7 +234,7 @@ The React frontend uses:
 - Modern CSS with flexbox/grid
 - Responsive design
 
-## 📦 Deployment
+##  Deployment
 
 ### Production Deployment with Docker
 
@@ -256,30 +256,36 @@ docker-compose -f docker-compose.yml up -d
 **Frontend:**
 - `REACT_APP_API_URL` - Backend API URL
 
-## 🤝 Contributing
+##  Contributing
 
 This is a final year project. Contributions, issues, and feature requests are welcome!
 
-## 📝 License
+##  License
 
 This project is developed as part of academic requirements at Addis Ababa University.
 
-## 👥 Authors
+##  Authors
 
 - Final Year Software Engineering Students
+   Abdellah Teshome
+   Abdurezak Zeynu
+   Biniyam Dagne
+   Rehobot Melaku
+   Yared Yirgalem
+
 - Addis Ababa University
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Ethiopian Airlines Group
 - Ethiopian Aviation Academy
 - Addis Ababa University, Faculty of Software Engineering
-- All instructors and advisors who supported this project
+- Our Afvisor Mr. Daniel Abebe
 
-## 📧 Contact
+##  Contact
 
 For questions or feedback about this project, please contact the development team through the university.
 
 ---
 
-**Built with ❤️ for Ethiopian Airlines**
+**Built with  for Ethiopian Airlines**
