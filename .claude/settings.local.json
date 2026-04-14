@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh issue:*)"
+      "Bash(gh issue:*)",
+      "Bash(python -c ':*)"
     ]
   }
 }
