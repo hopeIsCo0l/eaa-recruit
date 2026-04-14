@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI
 
-from src.routers import health, ranking
+from src.routers import bias, health, ranking
 from src.services.embedding_service import load_model
 from src.services.kafka_consumer import start_consumer
 
@@ -22,3 +22,4 @@ def startup_event() -> None:
 
 app.include_router(health.router)
 app.include_router(ranking.router)
+app.include_router(bias.router)

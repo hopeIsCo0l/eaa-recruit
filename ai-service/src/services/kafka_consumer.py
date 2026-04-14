@@ -50,6 +50,7 @@ def _process_cv_uploaded(event: CvUploadedEvent) -> None:
     logger.info("CV_UPLOADED received: applicationId=%s", event.applicationId)
     from src.utils.text_extractor import extract_text
     from src.utils.nlp_pipeline import preprocess
+    from src.utils.pii_masker import mask
 
     try:
         raw_text = extract_text(event.cvFilePath)
@@ -58,7 +59,18 @@ def _process_cv_uploaded(event: CvUploadedEvent) -> None:
         # FR-21 callback with failure status wired here in FR-66+
         return
 
-    preprocessed = preprocess(raw_text)
+    # FR-75: mask PII before any ML processing or caching
+    mask_result = mask(raw_text)
+    if mask_result.detections:
+        logger.info(
+            "PII detections for applicationId=%s: %s",
+            event.applicationId,
+            ", ".join(f"{lbl}×{cnt}" for lbl, cnt in mask_result.detections),
+        )
+    # raw_text kept for display-only use (e.g. feedback PDF); masked_text goes to ML
+    masked_text = mask_result.masked_text
+
+    preprocessed = preprocess(masked_text)
     logger.info("CV preprocessed: applicationId=%s chars=%d", event.applicationId, len(preprocessed))
     # FR-66 similarity scoring wired here
 
