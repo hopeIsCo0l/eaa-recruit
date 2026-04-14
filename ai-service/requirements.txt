@@ -13,3 +13,5 @@ numpy==1.26.4
 redis==5.0.8
 lime==0.2.0.1
 scikit-learn==1.5.2
+reportlab==4.2.2
+matplotlib==3.9.2

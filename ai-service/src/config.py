@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     chroma_path: str = "./chroma_db"
     spring_callback_url: str = "http://localhost:8080"
     kafka_bootstrap_servers: str = "localhost:9092"
+    pdf_storage_dir: str = "./reports"
 
     class Config:
         env_file = ".env"
