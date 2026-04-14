@@ -1,12 +1,13 @@
 import logging
 import os
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 import numpy as np
 
 from src.services.answer_key_service import get_answer_key_embedding
 from src.services.embedding_service import embed
+from src.services.keyword_checker import KeywordCheckResult, check_keywords, apply_keyword_penalty
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class AnswerScore:
     raw_similarity: float
     awarded_marks: float
     max_marks: float
+    keyword_result: Optional[KeywordCheckResult] = field(default=None)
 
 
 def _cosine(a: List[float], b: List[float]) -> float:
@@ -35,6 +37,7 @@ def score_answer(
     ideal_answer: str,
     candidate_answer: str,
     max_marks: float,
+    required_keywords: Optional[List[str]] = None,
 ) -> AnswerScore:
     ideal_vec = get_answer_key_embedding(question_id, ideal_answer)
     candidate_vec = embed(candidate_answer)
@@ -49,13 +52,21 @@ def score_answer(
     else:
         awarded = 0.0
 
+    # Apply keyword penalty if keywords defined
+    kw_result = None
+    if required_keywords:
+        kw_result = check_keywords(candidate_answer, required_keywords)
+        awarded = apply_keyword_penalty(awarded, kw_result, max_marks)
+
     logger.info(
-        "Scored answer question_id=%s similarity=%.4f awarded=%.2f/%.2f",
+        "Scored answer question_id=%s similarity=%.4f awarded=%.2f/%.2f keywords_missing=%s",
         question_id, similarity, awarded, max_marks,
+        kw_result.missing if kw_result else [],
     )
     return AnswerScore(
         question_id=question_id,
         raw_similarity=round(similarity, 4),
         awarded_marks=awarded,
         max_marks=max_marks,
+        keyword_result=kw_result,
     )
