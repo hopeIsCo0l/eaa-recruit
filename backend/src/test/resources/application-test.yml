@@ -24,7 +24,15 @@ spring:
   flyway:
     enabled: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
+    producer:
+      acks: "1"
+      retries: 1
+      properties:
+        enable.idempotence: false
+    consumer:
+      group-id: recruit-backend-test
+      auto-offset-reset: earliest
   data:
     redis:
       host: localhost
