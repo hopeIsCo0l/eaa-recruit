@@ -4,12 +4,23 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+    hikari:
+      pool-name: TestHikariPool
+      minimum-idle: 2
+      maximum-pool-size: 5
+      connection-timeout: 5000
+      idle-timeout: 10000
+      max-lifetime: 60000
   jpa:
     hibernate:
       ddl-auto: create-drop
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+        jdbc:
+          batch_size: 50
+          order_inserts: true
+          order_updates: true
   flyway:
     enabled: false
   kafka:

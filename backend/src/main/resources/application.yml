@@ -10,6 +10,15 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: RecruitHikariPool
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:30000}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:20000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+      keepalive-time: ${DB_POOL_KEEPALIVE:60000}
+      connection-test-query: SELECT 1
 
   jpa:
     hibernate:
@@ -19,6 +28,13 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        jdbc:
+          batch_size: 50
+          order_inserts: true
+          order_updates: true
+        query:
+          in_clause_parameter_padding: true
+        generate_statistics: false
     open-in-view: false
 
   data:
@@ -50,6 +66,9 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    enable:
+      hikaricp: true
 
 jwt:
   secret: ${JWT_SECRET:change-me-in-production-min-256-bits-long-secret-key}
