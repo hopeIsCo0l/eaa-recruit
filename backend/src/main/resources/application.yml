@@ -47,12 +47,20 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: ${KAFKA_PRODUCER_ACKS:all}
+      retries: ${KAFKA_PRODUCER_RETRIES:3}
+      properties:
+        enable.idempotence: true
+        retry.backoff.ms: 500
     consumer:
-      group-id: recruit-backend
+      group-id: ${KAFKA_CONSUMER_GROUP:recruit-backend}
+      auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "com.eaa.recruit.*"
+    admin:
+      auto-create: true
 
   flyway:
     enabled: true
