@@ -1,5 +1,6 @@
 package com.eaa.recruit.controller;
 
+import com.eaa.recruit.cache.BlockedUserCacheService;
 import com.eaa.recruit.config.SecurityConfig;
 import com.eaa.recruit.dto.auth.RegistrationResponse;
 import com.eaa.recruit.exception.BusinessException;
@@ -40,7 +41,8 @@ class AuthControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean  CandidateRegistrationService registrationService;
-    @MockBean  UserDetailsServiceImpl userDetailsService;
+    @MockBean  UserDetailsServiceImpl       userDetailsService;
+    @MockBean  BlockedUserCacheService      blockedUserCacheService;
 
     private static final String VALID_BODY = """
             {

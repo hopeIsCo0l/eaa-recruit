@@ -1,5 +1,6 @@
 package com.eaa.recruit.controller;
 
+import com.eaa.recruit.cache.BlockedUserCacheService;
 import com.eaa.recruit.config.SecurityConfig;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.GlobalExceptionHandler;
@@ -38,6 +39,7 @@ class AdminUserStatusControllerTest {
     @MockBean  UserStatusService       userStatusService;
     @MockBean  RecruiterAdminService   recruiterAdminService;
     @MockBean  UserDetailsServiceImpl  userDetailsService;
+    @MockBean  BlockedUserCacheService blockedUserCacheService;
 
     // ── RBAC ─────────────────────────────────────────────────────────────────
 

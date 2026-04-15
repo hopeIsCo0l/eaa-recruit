@@ -77,6 +77,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
 management:
   endpoints:
     web:
@@ -97,3 +102,13 @@ otp:
   ttl-seconds: ${OTP_TTL_SECONDS:300}
   length: ${OTP_LENGTH:6}
   key-prefix: "otp:"
+
+storage:
+  cv-upload-dir: ${CV_UPLOAD_DIR:./cv-uploads}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:change-me-internal-key}
+
+scheduler:
+  job-status:
+    cron: ${SCHEDULER_JOB_STATUS_CRON:0 * * * * *}

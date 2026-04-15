@@ -1,11 +1,13 @@
 package com.eaa.recruit.controller;
 
+import com.eaa.recruit.cache.BlockedUserCacheService;
 import com.eaa.recruit.config.SecurityConfig;
 import com.eaa.recruit.dto.admin.RecruiterCreatedResponse;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.GlobalExceptionHandler;
 import com.eaa.recruit.security.*;
 import com.eaa.recruit.service.RecruiterAdminService;
+import com.eaa.recruit.service.UserStatusService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -34,8 +36,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminUserControllerTest {
 
     @Autowired MockMvc mockMvc;
-    @MockBean  RecruiterAdminService recruiterAdminService;
-    @MockBean  UserDetailsServiceImpl userDetailsService;
+    @MockBean  RecruiterAdminService   recruiterAdminService;
+    @MockBean  UserStatusService       userStatusService;
+    @MockBean  UserDetailsServiceImpl  userDetailsService;
+    @MockBean  BlockedUserCacheService blockedUserCacheService;
 
     private static final String VALID_BODY = """
             {
