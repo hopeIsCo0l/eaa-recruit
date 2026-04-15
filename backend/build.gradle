@@ -30,6 +30,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.apache.commons:commons-pool2'
 
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
@@ -55,6 +56,9 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testRuntimeOnly 'com.h2database:h2'
+
+    // Embedded Redis for integration tests
+    testImplementation 'com.github.codemonstur:embedded-redis:1.4.3'
 }
 
 tasks.named('test') {
