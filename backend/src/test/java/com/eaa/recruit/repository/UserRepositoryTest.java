@@ -1,10 +1,12 @@
 package com.eaa.recruit.repository;
 
+import com.eaa.recruit.config.TestJpaAuditingConfig;
 import com.eaa.recruit.entity.Role;
 import com.eaa.recruit.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
@@ -14,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @ActiveProfiles("test")
+@Import(TestJpaAuditingConfig.class)
 class UserRepositoryTest {
 
     @Autowired UserRepository userRepository;
