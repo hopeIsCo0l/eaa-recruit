@@ -25,17 +25,11 @@ public class RecruiterAdminService {
     public RecruiterAdminService(UserRepository userRepository,
                                  PasswordEncoder passwordEncoder,
                                  WelcomeNotificationPort welcomeNotification) {
-        this.userRepository      = userRepository;
-        this.passwordEncoder     = passwordEncoder;
+        this.userRepository     = userRepository;
+        this.passwordEncoder    = passwordEncoder;
         this.welcomeNotification = welcomeNotification;
     }
 
-    /**
-     * Creates a new ACTIVE recruiter account.
-     * Only callable by ADMIN or SUPER_ADMIN (enforced at controller via @IsAdmin).
-     *
-     * @throws ConflictException if email is already registered
-     */
     @Transactional
     public RecruiterCreatedResponse createRecruiter(CreateRecruiterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
@@ -44,7 +38,6 @@ public class RecruiterAdminService {
 
         String hash = passwordEncoder.encode(request.temporaryPassword());
         User recruiter = User.create(request.email(), hash, Role.RECRUITER, request.fullName());
-        // Recruiters are created ACTIVE — no OTP needed, admin-vetted
         recruiter.activate();
         recruiter = userRepository.save(recruiter);
 
@@ -52,21 +45,14 @@ public class RecruiterAdminService {
 
         try {
             welcomeNotification.sendRecruiterWelcome(
-                    recruiter.getEmail(),
-                    recruiter.getFullName(),
-                    request.temporaryPassword()   // plain-text before hashing for the welcome email
-            );
+                    recruiter.getEmail(), recruiter.getFullName(), request.temporaryPassword());
         } catch (Exception ex) {
             log.error("Welcome notification failed for recruiter email='{}': {}",
                     recruiter.getEmail(), ex.getMessage(), ex);
-            // Non-fatal — account is created; admin can resend manually
         }
 
         return new RecruiterCreatedResponse(
-                recruiter.getId(),
-                recruiter.getEmail(),
-                recruiter.getFullName(),
-                "Recruiter account created successfully"
-        );
+                recruiter.getId(), recruiter.getEmail(),
+                recruiter.getFullName(), "Recruiter account created successfully");
     }
 }

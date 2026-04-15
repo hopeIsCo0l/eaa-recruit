@@ -5,10 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-/**
- * Mock welcome email adapter for dev/test environments.
- * Logs credentials to console instead of sending a real email.
- */
 @Component
 @Profile("!prod")
 public class MockWelcomeNotificationAdapter implements WelcomeNotificationPort {
