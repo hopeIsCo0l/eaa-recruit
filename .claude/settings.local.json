@@ -5,7 +5,12 @@
       "Bash(python -c ':*)",
       "Bash(gh project:*)",
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(git checkout:*)",
+      "Bash(gh pr *)",
+      "Bash(git rebase *)",
+      "Bash(GIT_EDITOR=true git rebase *)",
+      "Bash(git add *)"
     ]
   }
 }

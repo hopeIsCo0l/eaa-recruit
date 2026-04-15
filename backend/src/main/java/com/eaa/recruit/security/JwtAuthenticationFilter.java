@@ -1,5 +1,6 @@
 package com.eaa.recruit.security;
 
+import com.eaa.recruit.cache.BlockedUserCacheService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,10 +21,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenProvider        jwtTokenProvider;
+    private final BlockedUserCacheService blockedUserCache;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
+                                   BlockedUserCacheService blockedUserCache) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.blockedUserCache = blockedUserCache;
     }
 
     @Override
@@ -33,12 +37,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
 
         if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            String email  = jwtTokenProvider.extractEmail(token);
             Long   userId = jwtTokenProvider.extractUserId(token);
+            String email  = jwtTokenProvider.extractEmail(token);
             String role   = jwtTokenProvider.extractRole(token);
 
+            // Immediately reject tokens belonging to deactivated users
+            if (blockedUserCache.isBlocked(userId)) {
+                chain.doFilter(request, response);
+                return;
+            }
+
             AuthenticatedUser principal = new AuthenticatedUser(userId, email, role);
-            List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+            List<SimpleGrantedAuthority> authorities =
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
             UsernamePasswordAuthenticationToken auth =
                     new UsernamePasswordAuthenticationToken(principal, null, authorities);
