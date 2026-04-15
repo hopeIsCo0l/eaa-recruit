@@ -41,6 +41,17 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_COMMAND_TIMEOUT:2000ms}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:1000ms}
+      lettuce:
+        pool:
+          enabled: true
+          min-idle: ${REDIS_POOL_MIN_IDLE:2}
+          max-idle: ${REDIS_POOL_MAX_IDLE:8}
+          max-active: ${REDIS_POOL_MAX_ACTIVE:16}
+          max-wait: ${REDIS_POOL_MAX_WAIT:500ms}
+        shutdown-timeout: 200ms
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -81,3 +92,8 @@ management:
 jwt:
   secret: ${JWT_SECRET:change-me-in-production-min-256-bits-long-secret-key}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+otp:
+  ttl-seconds: ${OTP_TTL_SECONDS:300}
+  length: ${OTP_LENGTH:6}
+  key-prefix: "otp:"
