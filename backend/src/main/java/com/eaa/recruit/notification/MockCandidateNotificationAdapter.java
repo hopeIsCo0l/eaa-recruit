@@ -20,4 +20,24 @@ public class MockCandidateNotificationAdapter implements CandidateNotificationPo
         log.info("[MOCK NOTIFY] Exam authorized — to='{}' name='{}' job='{}' token='{}'",
                 email, fullName, jobTitle, examToken);
     }
+
+    @Override
+    public void notifyShortlisted(String email, String fullName, String jobTitle) {
+        log.info("[MOCK NOTIFY] Shortlisted — to='{}' name='{}' job='{}'",
+                email, fullName, jobTitle);
+    }
+
+    @Override
+    public void notifyDecision(String email, String fullName, String jobTitle,
+                                String decision, String notes) {
+        log.info("[MOCK NOTIFY] Decision='{}' — to='{}' name='{}' job='{}' notes='{}'",
+                decision, email, fullName, jobTitle, notes);
+    }
+
+    @Override
+    public void notifyInterviewReminder(String email, String fullName, String jobTitle,
+                                         String slotDate, String startTime) {
+        log.info("[MOCK NOTIFY] Interview reminder — to='{}' name='{}' job='{}' date='{}' time='{}'",
+                email, fullName, jobTitle, slotDate, startTime);
+    }
 }

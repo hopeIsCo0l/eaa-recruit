@@ -25,4 +25,13 @@ public interface AvailabilitySlotRepository extends JpaRepository<AvailabilitySl
                           @Param("slotDate")    LocalDate slotDate,
                           @Param("startTime")   LocalTime startTime,
                           @Param("endTime")     LocalTime endTime);
+
+    // FR-30: available slots for a job's exam date range
+    @Query("""
+            SELECT s FROM AvailabilitySlot s
+            WHERE s.booked = false
+              AND s.slotDate >= :fromDate
+            ORDER BY s.slotDate ASC, s.startTime ASC
+            """)
+    List<AvailabilitySlot> findAvailableSlots(@Param("fromDate") LocalDate fromDate);
 }

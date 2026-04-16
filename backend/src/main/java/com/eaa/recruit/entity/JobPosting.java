@@ -86,4 +86,5 @@ public class JobPosting extends BaseEntity {
     public void publish()               { this.status = JobPostingStatus.OPEN; }
     public void close()                 { this.status = JobPostingStatus.CLOSED; }
     public void scheduleExam()          { this.status = JobPostingStatus.EXAM_SCHEDULED; }
+    public void archive()               { this.status = JobPostingStatus.ARCHIVED; }
 }
