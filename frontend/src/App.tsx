@@ -1,111 +1,71 @@
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { useAuthStore } from '@/store/authStore'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
-function App() {
-  const { isAuthenticated, user, login, logout } = useAuthStore()
+// Layout
+import { AppShell } from '@/components/layout/AppShell'
 
-  const handleDemoLogin = () => {
-    login('demo-token', {
-      id: 1,
-      email: 'demo@eaa.com',
-      fullName: 'Demo User',
-      role: 'CANDIDATE',
-    })
-  }
+// Auth pages
+import { LoginPage } from '@/pages/auth/LoginPage'
+import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { OtpPage } from '@/pages/auth/OtpPage'
 
+// Shared
+import { DashboardPage } from '@/pages/DashboardPage'
+
+// Candidate pages
+import { JobBoardPage } from '@/pages/candidate/JobBoardPage'
+import { ApplicationsPage } from '@/pages/candidate/ApplicationsPage'
+import { ExamPage } from '@/pages/candidate/ExamPage'
+import { InterviewSlotPage } from '@/pages/candidate/InterviewSlotPage'
+import { ResultsPage } from '@/pages/candidate/ResultsPage'
+import { ProfilePage } from '@/pages/candidate/ProfilePage'
+
+// Recruiter pages
+import { JobCreatorPage } from '@/pages/recruiter/JobCreatorPage'
+import { RankingPage } from '@/pages/recruiter/RankingPage'
+import { AvailabilityCalendarPage } from '@/pages/recruiter/AvailabilityCalendarPage'
+
+// Admin pages
+import { UsersPage } from '@/pages/admin/UsersPage'
+import { HealthDashboard } from '@/pages/admin/HealthDashboard'
+import { AuditLogPage } from '@/pages/admin/AuditLogPage'
+import { AiModelPage } from '@/pages/admin/AiModelPage'
+
+export default function App() {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
-      {/* Header */}
-      <header className="mb-12 text-center">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-            <span className="text-white font-bold text-lg">✈</span>
-          </div>
-          <h1 className="text-4xl font-bold text-foreground tracking-tight">
-            EAA Recruit
-          </h1>
-        </div>
-        <p className="text-muted-foreground text-lg">
-          AI-Powered Aviation Recruitment Platform
-        </p>
-      </header>
+    <BrowserRouter>
+      <Routes>
+        {/* Public auth routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-otp" element={<OtpPage />} />
 
-      {/* Auth status card */}
-      <Card className="w-full max-w-md mb-8">
-        <CardHeader>
-          <CardTitle>Authentication State</CardTitle>
-          <CardDescription>
-            Zustand store persisted to localStorage
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Status</span>
-            <span className={isAuthenticated ? 'text-green-400' : 'text-muted-foreground'}>
-              {isAuthenticated ? 'Authenticated' : 'Guest'}
-            </span>
-          </div>
-          {user && (
-            <>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">User</span>
-                <span className="text-foreground">{user.fullName}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Role</span>
-                <span className="text-primary font-mono text-xs">{user.role}</span>
-              </div>
-            </>
-          )}
-        </CardContent>
-        <CardFooter className="gap-3">
-          {isAuthenticated ? (
-            <Button variant="outline" className="w-full" onClick={logout}>
-              Logout
-            </Button>
-          ) : (
-            <Button className="w-full" onClick={handleDemoLogin}>
-              Demo Login
-            </Button>
-          )}
-        </CardFooter>
-      </Card>
+        {/* Protected shell — guards unauthenticated via AppShell */}
+        <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
 
-      {/* Feature cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
-        {[
-          { title: 'CV Screening', desc: 'AI-powered relevance scoring via SBERT', icon: '📄' },
-          { title: 'Exam Engine', desc: 'Concurrent batch exam management', icon: '📝' },
-          { title: 'Interview Scheduling', desc: 'Slot booking with conflict prevention', icon: '📅' },
-          { title: 'XAI Feedback', desc: 'Explainable AI reports for candidates', icon: '🔍' },
-        ].map((f) => (
-          <Card key={f.title} className="hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{f.icon}</span>
-                <CardTitle className="text-base">{f.title}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{f.desc}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+          {/* Candidate */}
+          <Route path="/jobs" element={<JobBoardPage />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
+          <Route path="/exam" element={<ExamPage />} />
+          <Route path="/interview" element={<InterviewSlotPage />} />
+          <Route path="/results" element={<ResultsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
 
-      <footer className="mt-12 text-muted-foreground text-sm">
-        Vite {import.meta.env.VITE_APP_VERSION ?? ''} · React 18 · TypeScript · Tailwind v4 · Shadcn/UI · Zustand
-      </footer>
-    </div>
+          {/* Recruiter */}
+          <Route path="/jobs/new" element={<JobCreatorPage />} />
+          <Route path="/recruiter/rankings" element={<RankingPage />} />
+          <Route path="/availability" element={<AvailabilityCalendarPage />} />
+
+          {/* Admin / Super Admin */}
+          <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/admin/health" element={<HealthDashboard />} />
+          <Route path="/admin/audit" element={<AuditLogPage />} />
+          <Route path="/admin/ai-model" element={<AiModelPage />} />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
-
-export default App
