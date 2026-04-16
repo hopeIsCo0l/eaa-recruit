@@ -1,6 +1,7 @@
 package com.eaa.recruit.service;
 
 import com.eaa.recruit.dto.application.SubmitApplicationResponse;
+import com.eaa.recruit.dto.internal.ExamScoreCallbackRequest;
 import com.eaa.recruit.entity.*;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
@@ -28,12 +29,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ApplicationServiceTest {
 
-    @Mock ApplicationRepository  applicationRepository;
-    @Mock JobPostingRepository   jobPostingRepository;
-    @Mock UserRepository         userRepository;
-    @Mock FileStorageService     fileStorageService;
-    @Mock KafkaEventPublisher    kafkaEventPublisher;
-    @Mock HardFilterService      hardFilterService;
+    @Mock ApplicationRepository    applicationRepository;
+    @Mock JobPostingRepository     jobPostingRepository;
+    @Mock UserRepository           userRepository;
+    @Mock FileStorageService       fileStorageService;
+    @Mock KafkaEventPublisher      kafkaEventPublisher;
+    @Mock HardFilterService        hardFilterService;
+    @Mock WeightedScoringService   weightedScoringService;
 
     ApplicationService service;
 
@@ -43,7 +45,8 @@ class ApplicationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ApplicationService(applicationRepository, jobPostingRepository,
-                userRepository, fileStorageService, kafkaEventPublisher, hardFilterService);
+                userRepository, fileStorageService, kafkaEventPublisher,
+                hardFilterService, weightedScoringService);
     }
 
     private static User candidateUser() {
@@ -118,5 +121,40 @@ class ApplicationServiceTest {
 
         assertThatThrownBy(() -> service.submitApplication(99L, validCv(), CANDIDATE))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // FR-27
+    @Test
+    void applyExamScore_recordsScoreAndComputesFinalScore() {
+        User recruiter  = User.create("r@eaa.com", "hash", Role.RECRUITER, "Alice");
+        JobPosting job  = openJob(recruiter);
+        User candidate  = candidateUser();
+        Application app = Application.create(candidate, job, "cv.pdf");
+        app.applyAiScore(0.8, "http://report");
+        app.markHardFilterPassed();
+        app.authorizeExam("token");
+
+        when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
+        when(weightedScoringService.compute(app)).thenReturn(72.0);
+        when(applicationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.applyExamScore(5L, new ExamScoreCallbackRequest(80.0));
+
+        assertThat(app.getStatus()).isEqualTo(ApplicationStatus.EXAM_COMPLETED);
+        assertThat(app.getExamScore()).isEqualTo(80.0);
+    }
+
+    @Test
+    void applyExamScore_throwsBusinessException_whenNotExamAuthorized() {
+        User recruiter  = User.create("r@eaa.com", "hash", Role.RECRUITER, "Alice");
+        JobPosting job  = openJob(recruiter);
+        User candidate  = candidateUser();
+        Application app = Application.create(candidate, job, "cv.pdf");
+        // status is SUBMITTED, not EXAM_AUTHORIZED
+
+        when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
+
+        assertThatThrownBy(() -> service.applyExamScore(5L, new ExamScoreCallbackRequest(80.0)))
+                .isInstanceOf(BusinessException.class);
     }
 }

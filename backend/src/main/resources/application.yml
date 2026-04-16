@@ -112,3 +112,9 @@ internal:
 scheduler:
   job-status:
     cron: ${SCHEDULER_JOB_STATUS_CRON:0 * * * * *}
+  interview-reminder:
+    cron: ${SCHEDULER_REMINDER_CRON:0 0 8 * * *}
+    days-before: ${SCHEDULER_REMINDER_DAYS_BEFORE:1}
+
+xai:
+  reports-dir: ${XAI_REPORTS_DIR:./xai-reports}

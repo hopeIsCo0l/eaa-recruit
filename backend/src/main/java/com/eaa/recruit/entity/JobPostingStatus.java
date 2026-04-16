@@ -4,5 +4,6 @@ public enum JobPostingStatus {
     DRAFT,
     OPEN,
     CLOSED,
-    EXAM_SCHEDULED
+    EXAM_SCHEDULED,
+    ARCHIVED
 }

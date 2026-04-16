@@ -177,9 +177,14 @@ public class ExamService {
                 .filter(id -> id != null)
                 .toList();
 
+        // Use the job's exam date as the scheduled start time (FR-26)
+        Instant scheduledAt = exam.getJob().getExamDate()
+                .atStartOfDay(java.time.ZoneOffset.UTC)
+                .toInstant();
+
         ExamBatchReadyEvent event = ExamBatchReadyEvent.of(
                 exam.getId(), jobId, candidateIds,
-                exam.getDurationMinutes(), Instant.now());
+                exam.getDurationMinutes(), scheduledAt);
 
         try {
             kafkaEventPublisher.publishExamBatchReady(event);

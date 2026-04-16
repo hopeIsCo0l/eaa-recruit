@@ -3,6 +3,7 @@ package com.eaa.recruit.controller;
 import com.eaa.recruit.config.InternalApiKeyProperties;
 import com.eaa.recruit.dto.ApiResponse;
 import com.eaa.recruit.dto.application.AiScoreCallbackRequest;
+import com.eaa.recruit.dto.internal.ExamScoreCallbackRequest;
 import com.eaa.recruit.exception.UnauthorizedException;
 import com.eaa.recruit.service.ApplicationService;
 import jakarta.validation.Valid;
@@ -39,6 +40,21 @@ public class InternalController {
         validateApiKey(apiKey);
         applicationService.applyAiScore(applicationId, request);
         return ResponseEntity.ok(ApiResponse.success("AI score applied"));
+    }
+
+    /**
+     * POST /api/v1/internal/applications/{id}/exam-score
+     * FR-27: Receive exam score from Go engine.
+     */
+    @PostMapping("/applications/{id}/exam-score")
+    public ResponseEntity<ApiResponse<Void>> receiveExamScore(
+            @PathVariable("id") Long applicationId,
+            @RequestHeader("X-Internal-Api-Key") String apiKey,
+            @Valid @RequestBody ExamScoreCallbackRequest request) {
+
+        validateApiKey(apiKey);
+        applicationService.applyExamScore(applicationId, request);
+        return ResponseEntity.ok(ApiResponse.success("Exam score applied"));
     }
 
     private void validateApiKey(String provided) {

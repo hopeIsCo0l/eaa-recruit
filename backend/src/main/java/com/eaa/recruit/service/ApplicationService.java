@@ -2,7 +2,9 @@ package com.eaa.recruit.service;
 
 import com.eaa.recruit.dto.application.AiScoreCallbackRequest;
 import com.eaa.recruit.dto.application.SubmitApplicationResponse;
+import com.eaa.recruit.dto.internal.ExamScoreCallbackRequest;
 import com.eaa.recruit.entity.Application;
+import com.eaa.recruit.entity.ApplicationStatus;
 import com.eaa.recruit.entity.JobPosting;
 import com.eaa.recruit.entity.JobPostingStatus;
 import com.eaa.recruit.entity.User;
@@ -32,19 +34,22 @@ public class ApplicationService {
     private final FileStorageService     fileStorageService;
     private final KafkaEventPublisher    kafkaEventPublisher;
     private final HardFilterService      hardFilterService;
+    private final WeightedScoringService weightedScoringService;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                                JobPostingRepository jobPostingRepository,
                                UserRepository userRepository,
                                FileStorageService fileStorageService,
                                KafkaEventPublisher kafkaEventPublisher,
-                               HardFilterService hardFilterService) {
+                               HardFilterService hardFilterService,
+                               WeightedScoringService weightedScoringService) {
         this.applicationRepository = applicationRepository;
         this.jobPostingRepository  = jobPostingRepository;
         this.userRepository        = userRepository;
         this.fileStorageService    = fileStorageService;
         this.kafkaEventPublisher   = kafkaEventPublisher;
         this.hardFilterService     = hardFilterService;
+        this.weightedScoringService = weightedScoringService;
     }
 
     /** FR-19: Submit application with CV upload. */
@@ -103,5 +108,23 @@ public class ApplicationService {
 
         // FR-22: immediately run hard filter after AI score is recorded
         hardFilterService.applyHardFilter(application);
+    }
+
+    /** FR-27: Receive exam score from Go engine, recompute weighted final score. */
+    @Transactional
+    public void applyExamScore(Long applicationId, ExamScoreCallbackRequest request) {
+        Application application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
+
+        if (application.getStatus() != ApplicationStatus.EXAM_AUTHORIZED) {
+            throw new BusinessException("Exam score can only be applied to EXAM_AUTHORIZED applications");
+        }
+
+        double finalScore = weightedScoringService.compute(application);
+        application.recordExamScore(request.examScore(), finalScore);
+        applicationRepository.save(application);
+
+        log.info("Exam score applied applicationId={} examScore={} finalScore={}",
+                applicationId, request.examScore(), finalScore);
     }
 }

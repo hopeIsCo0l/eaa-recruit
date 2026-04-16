@@ -31,6 +31,13 @@ public class AvailabilitySlot extends BaseEntity {
     @Column(name = "is_booked", nullable = false)
     private boolean booked = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booked_by_id")
+    private User bookedBy;
+
+    @Column(name = "booked_at")
+    private java.time.Instant bookedAt;
+
     protected AvailabilitySlot() {}
 
     private AvailabilitySlot(User recruiter, LocalDate slotDate,
@@ -51,6 +58,12 @@ public class AvailabilitySlot extends BaseEntity {
     public LocalTime getStartTime() { return startTime; }
     public LocalTime getEndTime()   { return endTime; }
     public boolean   isBooked()     { return booked; }
+    public User      getBookedBy()  { return bookedBy; }
+    public java.time.Instant getBookedAt() { return bookedAt; }
 
-    public void book() { this.booked = true; }
+    public void book(User candidate) {
+        this.booked    = true;
+        this.bookedBy  = candidate;
+        this.bookedAt  = java.time.Instant.now();
+    }
 }

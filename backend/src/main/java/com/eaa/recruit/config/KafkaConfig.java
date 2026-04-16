@@ -1,6 +1,8 @@
 package com.eaa.recruit.config;
 
 import com.eaa.recruit.messaging.KafkaTopics;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -83,5 +85,15 @@ public class KafkaConfig {
                 .partitions(3)
                 .replicas(1)
                 .build();
+    }
+
+    // FR-38: admin client for health monitoring
+    @Bean(destroyMethod = "close")
+    public AdminClient kafkaAdminClient() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(AdminClientConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
+        config.put(AdminClientConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, 5000);
+        return AdminClient.create(config);
     }
 }

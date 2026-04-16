@@ -3,6 +3,7 @@ package com.eaa.recruit.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -14,10 +15,15 @@ import java.time.Instant;
     indexes = {
         @Index(name = "idx_applications_candidate", columnList = "candidate_id"),
         @Index(name = "idx_applications_job",       columnList = "job_id"),
-        @Index(name = "idx_applications_status",    columnList = "status")
+        @Index(name = "idx_applications_status",    columnList = "status"),
+        @Index(name = "idx_applications_slot",      columnList = "interview_slot_id")
     }
 )
 public class Application extends BaseEntity {
+
+    private static final Set<ApplicationStatus> FINAL_STATUSES =
+            Set.of(ApplicationStatus.SELECTED, ApplicationStatus.REJECTED,
+                   ApplicationStatus.WAITLISTED, ApplicationStatus.HARD_FILTER_FAILED);
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "candidate_id", nullable = false, updatable = false)
@@ -55,6 +61,23 @@ public class Application extends BaseEntity {
     @Column(name = "submitted_at", nullable = false, updatable = false)
     private Instant submittedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "interview_slot_id")
+    private AvailabilitySlot interviewSlot;
+
+    @Column(name = "reminder_sent", nullable = false)
+    private boolean reminderSent = false;
+
+    @Column(name = "decision_notes", columnDefinition = "TEXT")
+    private String decisionNotes;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "decision_by_id")
+    private User decisionBy;
+
+    @Column(name = "decided_at")
+    private Instant decidedAt;
+
     protected Application() {}
 
     private Application(User candidate, JobPosting job, String cvFilePath) {
@@ -71,17 +94,26 @@ public class Application extends BaseEntity {
 
     // ── Getters ──────────────────────────────────────────────────────────────
 
-    public User           getCandidate()          { return candidate; }
-    public JobPosting     getJob()                { return job; }
-    public String         getCvFilePath()         { return cvFilePath; }
-    public Double         getCvRelevanceScore()   { return cvRelevanceScore; }
-    public Double         getExamScore()          { return examScore; }
-    public Boolean        getHardFilterPassed()   { return hardFilterPassed; }
-    public Double         getFinalScore()         { return finalScore; }
-    public ApplicationStatus getStatus()          { return status; }
-    public String         getXaiReportUrl()       { return xaiReportUrl; }
-    public String         getExamToken()          { return examToken; }
-    public Instant        getSubmittedAt()        { return submittedAt; }
+    public User              getCandidate()        { return candidate; }
+    public JobPosting        getJob()              { return job; }
+    public String            getCvFilePath()       { return cvFilePath; }
+    public Double            getCvRelevanceScore() { return cvRelevanceScore; }
+    public Double            getExamScore()        { return examScore; }
+    public Boolean           getHardFilterPassed() { return hardFilterPassed; }
+    public Double            getFinalScore()       { return finalScore; }
+    public ApplicationStatus getStatus()           { return status; }
+    public String            getXaiReportUrl()     { return xaiReportUrl; }
+    public String            getExamToken()        { return examToken; }
+    public Instant           getSubmittedAt()      { return submittedAt; }
+    public AvailabilitySlot  getInterviewSlot()    { return interviewSlot; }
+    public boolean           isReminderSent()      { return reminderSent; }
+    public String            getDecisionNotes()    { return decisionNotes; }
+    public User              getDecisionBy()       { return decisionBy; }
+    public Instant           getDecidedAt()        { return decidedAt; }
+
+    public boolean hasFinalDecision() {
+        return FINAL_STATUSES.contains(status);
+    }
 
     // ── State transitions ─────────────────────────────────────────────────────
 
@@ -103,5 +135,35 @@ public class Application extends BaseEntity {
     public void authorizeExam(String token) {
         this.examToken = token;
         this.status    = ApplicationStatus.EXAM_AUTHORIZED;
+    }
+
+    public void recordExamScore(double score, double computedFinalScore) {
+        this.examScore  = score;
+        this.finalScore = computedFinalScore;
+        this.status     = ApplicationStatus.EXAM_COMPLETED;
+    }
+
+    public void shortlist() {
+        this.status = ApplicationStatus.SHORTLISTED;
+    }
+
+    public void bookInterviewSlot(AvailabilitySlot slot) {
+        this.interviewSlot = slot;
+        this.status        = ApplicationStatus.INTERVIEW_SCHEDULED;
+    }
+
+    public void recordDecision(ApplicationStatus decision, String notes, User by) {
+        this.status        = decision;
+        this.decisionNotes = notes;
+        this.decisionBy    = by;
+        this.decidedAt     = Instant.now();
+    }
+
+    public void markReminderSent() {
+        this.reminderSent = true;
+    }
+
+    public void updateFinalScore(double score) {
+        this.finalScore = score;
     }
 }

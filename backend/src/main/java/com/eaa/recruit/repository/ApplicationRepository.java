@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
@@ -37,4 +38,28 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
            nativeQuery = true)
     Page<DashboardProjection> findDashboardByRecruiterId(
             @Param("recruiterId") Long recruiterId, Pageable pageable);
+
+    // FR-32: fetch candidates with upcoming interviews where reminder not yet sent
+    @Query("""
+            SELECT a FROM Application a
+            WHERE a.status = com.eaa.recruit.entity.ApplicationStatus.INTERVIEW_SCHEDULED
+              AND a.reminderSent = false
+              AND a.interviewSlot.slotDate = :date
+            """)
+    List<Application> findScheduledForDateWithoutReminder(@Param("date") LocalDate date);
+
+    // FR-40: analytics
+    @Query(value = """
+            SELECT jp.title          AS jobTitle,
+                   COUNT(a.id)       AS total,
+                   AVG(a.final_score) AS avgScore,
+                   SUM(CASE WHEN a.status = 'SELECTED'   THEN 1 ELSE 0 END) AS selected,
+                   SUM(CASE WHEN a.status = 'REJECTED'   THEN 1 ELSE 0 END) AS rejected,
+                   SUM(CASE WHEN a.status = 'WAITLISTED' THEN 1 ELSE 0 END) AS waitlisted
+            FROM applications a
+            JOIN job_postings jp ON jp.id = a.job_id
+            GROUP BY jp.id, jp.title
+            ORDER BY jp.title
+            """, nativeQuery = true)
+    List<Object[]> findAnalyticsSummary();
 }
