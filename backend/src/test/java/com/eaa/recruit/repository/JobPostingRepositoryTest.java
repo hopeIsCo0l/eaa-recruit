@@ -12,6 +12,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +24,10 @@ class JobPostingRepositoryTest {
 
     @Autowired JobPostingRepository jobPostingRepository;
     @Autowired UserRepository userRepository;
+
+    private static final LocalDate OPEN  = LocalDate.now().plusDays(1);
+    private static final LocalDate CLOSE = OPEN.plusDays(30);
+    private static final LocalDate EXAM  = CLOSE.plusDays(7);
 
     private User recruiter;
 
@@ -36,7 +41,7 @@ class JobPostingRepositoryTest {
     @Test
     void saveAndFindById() {
         JobPosting saved = jobPostingRepository.save(
-            JobPosting.create("Pilot", "Fly planes", 170, 60, "BSc Aviation", recruiter)
+            JobPosting.create("Pilot", "Fly planes", 170, 60, "BSc Aviation", OPEN, CLOSE, EXAM, recruiter)
         );
 
         assertThat(saved.getId()).isNotNull();
@@ -47,10 +52,10 @@ class JobPostingRepositoryTest {
     @Test
     void findByStatus_returnsMatchingPostings() {
         JobPosting draft = jobPostingRepository.save(
-            JobPosting.create("Draft Job", "desc", 165, 55, "BSc", recruiter)
+            JobPosting.create("Draft Job", "desc", 165, 55, "BSc", OPEN, CLOSE, EXAM, recruiter)
         );
         JobPosting open = jobPostingRepository.save(
-            JobPosting.create("Open Job", "desc", 165, 55, "BSc", recruiter)
+            JobPosting.create("Open Job", "desc", 165, 55, "BSc", OPEN, CLOSE, EXAM, recruiter)
         );
         open.publish();
         jobPostingRepository.save(open);
@@ -67,17 +72,17 @@ class JobPostingRepositoryTest {
     @Test
     void findByCreatedById_returnsRecruiterPostings() {
         jobPostingRepository.save(
-            JobPosting.create("Job A", "desc", 170, 60, "BSc", recruiter)
+            JobPosting.create("Job A", "desc", 170, 60, "BSc", OPEN, CLOSE, EXAM, recruiter)
         );
         jobPostingRepository.save(
-            JobPosting.create("Job B", "desc", 175, 65, "MSc", recruiter)
+            JobPosting.create("Job B", "desc", 175, 65, "MSc", OPEN, CLOSE, EXAM, recruiter)
         );
 
         User other = userRepository.save(
             User.create("other@eaa.com", "hash", Role.RECRUITER, "Bob")
         );
         jobPostingRepository.save(
-            JobPosting.create("Job C", "desc", 160, 50, "BSc", other)
+            JobPosting.create("Job C", "desc", 160, 50, "BSc", OPEN, CLOSE, EXAM, other)
         );
 
         List<JobPosting> mine = jobPostingRepository.findByCreatedById(recruiter.getId());
@@ -87,7 +92,7 @@ class JobPostingRepositoryTest {
     @Test
     void allStatusTransitions_persistCorrectly() {
         JobPosting jp = jobPostingRepository.save(
-            JobPosting.create("Flight Eng", "desc", 168, 58, "BSc", recruiter)
+            JobPosting.create("Flight Eng", "desc", 168, 58, "BSc", OPEN, CLOSE, EXAM, recruiter)
         );
 
         jp.publish();

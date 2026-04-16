@@ -27,6 +27,19 @@ public class User extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private boolean active = false;
 
+    /** Candidate profile fields — nullable; only populated for CANDIDATE role. */
+    @Column(name = "phone", length = 20)
+    private String phone;
+
+    @Column(name = "height_cm")
+    private Integer heightCm;
+
+    @Column(name = "weight_kg")
+    private Integer weightKg;
+
+    @Column(name = "degree", length = 100)
+    private String degree;
+
     protected User() {}
 
     private User(String email, String passwordHash, Role role, String fullName) {
@@ -45,6 +58,11 @@ public class User extends BaseEntity {
     public Role   getRole()         { return role; }
     public String getFullName()     { return fullName; }
     public boolean isActive()       { return active; }
+
+    public String  getPhone()    { return phone; }
+    public Integer getHeightCm() { return heightCm; }
+    public Integer getWeightKg() { return weightKg; }
+    public String  getDegree()   { return degree; }
 
     public void activate()                     { this.active = true; }
     public void deactivate()                   { this.active = false; }
