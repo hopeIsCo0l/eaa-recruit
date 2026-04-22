@@ -2,7 +2,7 @@ package com.eaa.recruit.controller;
 
 import com.eaa.recruit.dto.ApiResponse;
 import com.eaa.recruit.dto.admin.AiModelRequest;
-import com.eaa.recruit.dto.admin.AiModelResponse;
+import com.eaa.recruit.dto.admin.AiModelStateResponse;
 import com.eaa.recruit.dto.admin.AuditLogResponse;
 import com.eaa.recruit.dto.admin.SystemHealthResponse;
 import com.eaa.recruit.entity.AuditLog;
@@ -117,36 +117,22 @@ public class AdminSystemController {
                 .body(ApiResponse.success(systemHealthService.getHealth()));
     }
 
-    /** POST /api/v1/admin/ai-models — FR-39 */
+    /** PUT /api/v1/admin/ai-model — FR-39: register new version + set active. */
     @IsSuperAdmin
-    @PostMapping("/ai-models")
-    public ResponseEntity<ApiResponse<AiModelResponse>> registerModel(
+    @PutMapping("/ai-model")
+    public ResponseEntity<ApiResponse<AiModelStateResponse>> updateModel(
             @Valid @RequestBody AiModelRequest request,
             @AuthenticationPrincipal AuthenticatedUser principal) {
 
-        AiModelResponse response = aiModelService.register(request, principal);
-        return ResponseEntity.ok(ApiResponse.success("AI model registered", response));
+        AiModelStateResponse response = aiModelService.update(request, principal);
+        return ResponseEntity.ok(ApiResponse.success("Active AI model updated", response));
     }
 
-    /** GET /api/v1/admin/ai-models — FR-39 */
+    /** GET /api/v1/admin/ai-model — FR-39: current active + version history. */
     @IsSuperAdmin
-    @GetMapping("/ai-models")
-    public ResponseEntity<ApiResponse<List<AiModelResponse>>> listModels() {
-        return ResponseEntity.ok(ApiResponse.success(aiModelService.listAll()));
-    }
-
-    /** GET /api/v1/admin/ai-models/active — FR-39 */
-    @IsSuperAdmin
-    @GetMapping("/ai-models/active")
-    public ResponseEntity<ApiResponse<AiModelResponse>> getActiveModel() {
-        return ResponseEntity.ok(ApiResponse.success(aiModelService.getActive()));
-    }
-
-    /** POST /api/v1/admin/ai-models/{id}/activate — FR-39 */
-    @IsSuperAdmin
-    @PostMapping("/ai-models/{id}/activate")
-    public ResponseEntity<ApiResponse<AiModelResponse>> activateModel(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("Model activated", aiModelService.activate(id)));
+    @GetMapping("/ai-model")
+    public ResponseEntity<ApiResponse<AiModelStateResponse>> getModel() {
+        return ResponseEntity.ok(ApiResponse.success(aiModelService.getState()));
     }
 
     private AuditLogResponse toResponse(AuditLog log) {
