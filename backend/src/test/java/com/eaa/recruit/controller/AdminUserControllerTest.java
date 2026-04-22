@@ -82,7 +82,7 @@ class AdminUserControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void admin_returns201_onSuccess() throws Exception {
-        when(recruiterAdminService.createRecruiter(any()))
+        when(recruiterAdminService.createRecruiter(any(), any()))
                 .thenReturn(new RecruiterCreatedResponse(
                         5L, "bob@example.com", "Bob Jones",
                         "Recruiter account created successfully"));
@@ -99,7 +99,7 @@ class AdminUserControllerTest {
     @Test
     @WithMockUser(roles = "SUPER_ADMIN")
     void superAdmin_returns201_onSuccess() throws Exception {
-        when(recruiterAdminService.createRecruiter(any()))
+        when(recruiterAdminService.createRecruiter(any(), any()))
                 .thenReturn(new RecruiterCreatedResponse(
                         6L, "bob2@example.com", "Bob Two",
                         "Recruiter account created successfully"));
@@ -118,7 +118,7 @@ class AdminUserControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void admin_returns409_onDuplicateEmail() throws Exception {
-        when(recruiterAdminService.createRecruiter(any()))
+        when(recruiterAdminService.createRecruiter(any(), any()))
                 .thenThrow(new ConflictException("Email is already registered: bob@example.com"));
 
         mockMvc.perform(post("/api/v1/admin/users/recruiter")

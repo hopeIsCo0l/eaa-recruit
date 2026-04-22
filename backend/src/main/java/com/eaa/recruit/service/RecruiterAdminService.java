@@ -7,6 +7,7 @@ import com.eaa.recruit.entity.User;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.notification.WelcomeNotificationPort;
 import com.eaa.recruit.repository.UserRepository;
+import com.eaa.recruit.security.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,17 +22,20 @@ public class RecruiterAdminService {
     private final UserRepository          userRepository;
     private final PasswordEncoder         passwordEncoder;
     private final WelcomeNotificationPort welcomeNotification;
+    private final AuditLogService         auditLogService;
 
     public RecruiterAdminService(UserRepository userRepository,
                                  PasswordEncoder passwordEncoder,
-                                 WelcomeNotificationPort welcomeNotification) {
-        this.userRepository     = userRepository;
-        this.passwordEncoder    = passwordEncoder;
+                                 WelcomeNotificationPort welcomeNotification,
+                                 AuditLogService auditLogService) {
+        this.userRepository      = userRepository;
+        this.passwordEncoder     = passwordEncoder;
         this.welcomeNotification = welcomeNotification;
+        this.auditLogService     = auditLogService;
     }
 
     @Transactional
-    public RecruiterCreatedResponse createRecruiter(CreateRecruiterRequest request) {
+    public RecruiterCreatedResponse createRecruiter(CreateRecruiterRequest request, AuthenticatedUser requester) {
         if (userRepository.existsByEmail(request.email())) {
             throw new ConflictException("Email is already registered: " + request.email());
         }
@@ -42,6 +46,9 @@ public class RecruiterAdminService {
         recruiter = userRepository.save(recruiter);
 
         log.info("Recruiter account created id={} email='{}'", recruiter.getId(), recruiter.getEmail());
+        auditLogService.log("USER", recruiter.getId(), null, "RECRUITER_CREATED",
+                userRepository.getReferenceById(requester.id()),
+                "Admin created recruiter " + recruiter.getEmail());
 
         try {
             welcomeNotification.sendRecruiterWelcome(

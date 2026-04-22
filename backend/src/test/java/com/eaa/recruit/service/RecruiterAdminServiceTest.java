@@ -7,6 +7,7 @@ import com.eaa.recruit.entity.User;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.notification.WelcomeNotificationPort;
 import com.eaa.recruit.repository.UserRepository;
+import com.eaa.recruit.security.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,12 +28,16 @@ class RecruiterAdminServiceTest {
     @Mock UserRepository          userRepository;
     @Mock PasswordEncoder         passwordEncoder;
     @Mock WelcomeNotificationPort welcomeNotification;
+    @Mock AuditLogService         auditLogService;
 
     RecruiterAdminService service;
 
+    private static final AuthenticatedUser ADMIN =
+            new AuthenticatedUser(7L, "admin@eaa.com", "ADMIN");
+
     @BeforeEach
     void setUp() {
-        service = new RecruiterAdminService(userRepository, passwordEncoder, welcomeNotification);
+        service = new RecruiterAdminService(userRepository, passwordEncoder, welcomeNotification, auditLogService);
     }
 
     private static CreateRecruiterRequest validRequest() {
@@ -51,7 +56,7 @@ class RecruiterAdminServiceTest {
         when(passwordEncoder.encode("TempPass1!")).thenReturn("$2a$hashed");
         when(userRepository.save(any(User.class))).thenReturn(savedRecruiter());
 
-        RecruiterCreatedResponse resp = service.createRecruiter(validRequest());
+        RecruiterCreatedResponse resp = service.createRecruiter(validRequest(), ADMIN);
 
         assertThat(resp.email()).isEqualTo("bob@example.com");
         assertThat(resp.fullName()).isEqualTo("Bob Jones");
@@ -69,7 +74,7 @@ class RecruiterAdminServiceTest {
     void createRecruiter_throwsConflict_onDuplicateEmail() {
         when(userRepository.existsByEmail("bob@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.createRecruiter(validRequest()))
+        assertThatThrownBy(() -> service.createRecruiter(validRequest(), ADMIN))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already registered");
 
@@ -86,7 +91,7 @@ class RecruiterAdminServiceTest {
                 .when(welcomeNotification).sendRecruiterWelcome(anyString(), anyString(), anyString());
 
         // Should not throw — notification failure is non-fatal
-        RecruiterCreatedResponse resp = service.createRecruiter(validRequest());
+        RecruiterCreatedResponse resp = service.createRecruiter(validRequest(), ADMIN);
         assertThat(resp.email()).isEqualTo("bob@example.com");
     }
 
@@ -96,7 +101,7 @@ class RecruiterAdminServiceTest {
         when(passwordEncoder.encode("TempPass1!")).thenReturn("$2a$10$bcrypt");
         when(userRepository.save(any())).thenReturn(savedRecruiter());
 
-        service.createRecruiter(validRequest());
+        service.createRecruiter(validRequest(), ADMIN);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());

@@ -24,6 +24,7 @@ class UserStatusServiceTest {
 
     @Mock UserRepository          userRepository;
     @Mock BlockedUserCacheService blockedUserCache;
+    @Mock AuditLogService         auditLogService;
 
     UserStatusService service;
 
@@ -32,7 +33,7 @@ class UserStatusServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new UserStatusService(userRepository, blockedUserCache);
+        service = new UserStatusService(userRepository, blockedUserCache, auditLogService);
     }
 
     private User activeCandidate(Long id) {

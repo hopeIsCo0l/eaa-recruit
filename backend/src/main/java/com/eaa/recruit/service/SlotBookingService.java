@@ -9,6 +9,7 @@ import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
 import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.repository.AvailabilitySlotRepository;
+import com.eaa.recruit.repository.UserRepository;
 import com.eaa.recruit.security.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +29,17 @@ public class SlotBookingService {
 
     private final ApplicationRepository      applicationRepository;
     private final AvailabilitySlotRepository slotRepository;
+    private final AuditLogService            auditLogService;
+    private final UserRepository             userRepository;
 
     public SlotBookingService(ApplicationRepository applicationRepository,
-                               AvailabilitySlotRepository slotRepository) {
+                               AvailabilitySlotRepository slotRepository,
+                               AuditLogService auditLogService,
+                               UserRepository userRepository) {
         this.applicationRepository = applicationRepository;
         this.slotRepository        = slotRepository;
+        this.auditLogService       = auditLogService;
+        this.userRepository        = userRepository;
     }
 
     @Transactional
@@ -57,6 +64,7 @@ public class SlotBookingService {
         }
 
         try {
+            ApplicationStatus oldStatus = application.getStatus();
             slot.book(application.getCandidate());
             slotRepository.save(slot);
 
@@ -65,6 +73,10 @@ public class SlotBookingService {
 
             log.info("Slot booked applicationId={} slotId={} candidateId={}",
                     applicationId, request.slotId(), principal.id());
+            auditLogService.log("APPLICATION", applicationId, oldStatus.name(),
+                    application.getStatus().name(),
+                    userRepository.getReferenceById(principal.id()),
+                    "Candidate booked interview slot " + request.slotId());
 
         } catch (DataIntegrityViolationException e) {
             throw new ConflictException("Slot was taken concurrently — please choose another");

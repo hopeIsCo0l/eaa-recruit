@@ -15,6 +15,7 @@ import com.eaa.recruit.notification.CandidateNotificationPort;
 import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.repository.ExamRepository;
 import com.eaa.recruit.repository.JobPostingRepository;
+import com.eaa.recruit.repository.UserRepository;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,19 +40,25 @@ public class ExamService {
     private final CandidateNotificationPort candidateNotificationPort;
     private final KafkaEventPublisher       kafkaEventPublisher;
     private final ObjectMapper              objectMapper;
+    private final AuditLogService           auditLogService;
+    private final UserRepository            userRepository;
 
     public ExamService(ExamRepository examRepository,
                        JobPostingRepository jobPostingRepository,
                        ApplicationRepository applicationRepository,
                        CandidateNotificationPort candidateNotificationPort,
                        KafkaEventPublisher kafkaEventPublisher,
-                       ObjectMapper objectMapper) {
+                       ObjectMapper objectMapper,
+                       AuditLogService auditLogService,
+                       UserRepository userRepository) {
         this.examRepository            = examRepository;
         this.jobPostingRepository      = jobPostingRepository;
         this.applicationRepository     = applicationRepository;
         this.candidateNotificationPort = candidateNotificationPort;
         this.kafkaEventPublisher       = kafkaEventPublisher;
         this.objectMapper              = objectMapper;
+        this.auditLogService           = auditLogService;
+        this.userRepository            = userRepository;
     }
 
     /** FR-24: Create exam definition for a job posting. */
@@ -125,6 +132,7 @@ public class ExamService {
             }
 
             String token = UUID.randomUUID().toString();
+            ApplicationStatus oldStatus = application.getStatus();
             application.authorizeExam(token);
             applicationRepository.save(application);
 
@@ -135,6 +143,10 @@ public class ExamService {
 
             authorizedIds.add(appId);
             log.info("Exam authorized applicationId={} candidateId={}", appId, candidate.getId());
+            auditLogService.log("APPLICATION", appId, oldStatus.name(),
+                    application.getStatus().name(),
+                    userRepository.getReferenceById(principal.id()),
+                    "Batch exam authorization");
         }
 
         if (!authorizedIds.isEmpty()) {

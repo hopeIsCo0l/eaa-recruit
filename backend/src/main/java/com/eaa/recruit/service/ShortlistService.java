@@ -7,6 +7,8 @@ import com.eaa.recruit.entity.ApplicationStatus;
 import com.eaa.recruit.exception.ResourceNotFoundException;
 import com.eaa.recruit.notification.CandidateNotificationPort;
 import com.eaa.recruit.repository.ApplicationRepository;
+import com.eaa.recruit.repository.UserRepository;
+import com.eaa.recruit.security.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,15 +24,21 @@ public class ShortlistService {
 
     private final ApplicationRepository     applicationRepository;
     private final CandidateNotificationPort candidateNotificationPort;
+    private final AuditLogService           auditLogService;
+    private final UserRepository            userRepository;
 
     public ShortlistService(ApplicationRepository applicationRepository,
-                             CandidateNotificationPort candidateNotificationPort) {
+                             CandidateNotificationPort candidateNotificationPort,
+                             AuditLogService auditLogService,
+                             UserRepository userRepository) {
         this.applicationRepository     = applicationRepository;
         this.candidateNotificationPort = candidateNotificationPort;
+        this.auditLogService           = auditLogService;
+        this.userRepository            = userRepository;
     }
 
     @Transactional
-    public ShortlistResponse shortlist(ShortlistRequest request) {
+    public ShortlistResponse shortlist(ShortlistRequest request, AuthenticatedUser principal) {
         int shortlisted = 0;
         int skipped     = 0;
 
@@ -43,6 +51,7 @@ public class ShortlistService {
                 continue;
             }
 
+            ApplicationStatus oldStatus = application.getStatus();
             application.shortlist();
             applicationRepository.save(application);
 
@@ -52,6 +61,10 @@ public class ShortlistService {
                     application.getJob().getTitle());
 
             log.info("Application shortlisted id={}", id);
+            auditLogService.log("APPLICATION", id, oldStatus.name(),
+                    application.getStatus().name(),
+                    userRepository.getReferenceById(principal.id()),
+                    "Recruiter shortlist");
             shortlisted++;
         }
 

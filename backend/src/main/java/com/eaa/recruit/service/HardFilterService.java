@@ -1,6 +1,7 @@
 package com.eaa.recruit.service;
 
 import com.eaa.recruit.entity.Application;
+import com.eaa.recruit.entity.ApplicationStatus;
 import com.eaa.recruit.entity.JobPosting;
 import com.eaa.recruit.entity.User;
 import com.eaa.recruit.notification.CandidateNotificationPort;
@@ -17,11 +18,14 @@ public class HardFilterService {
 
     private final ApplicationRepository       applicationRepository;
     private final CandidateNotificationPort   candidateNotificationPort;
+    private final AuditLogService             auditLogService;
 
     public HardFilterService(ApplicationRepository applicationRepository,
-                              CandidateNotificationPort candidateNotificationPort) {
+                              CandidateNotificationPort candidateNotificationPort,
+                              AuditLogService auditLogService) {
         this.applicationRepository     = applicationRepository;
         this.candidateNotificationPort = candidateNotificationPort;
+        this.auditLogService           = auditLogService;
     }
 
     /**
@@ -38,6 +42,7 @@ public class HardFilterService {
                       && passesWeightCheck(candidate, job)
                       && passesDegreeCheck(candidate, job);
 
+        ApplicationStatus oldStatus = application.getStatus();
         if (passed) {
             application.markHardFilterPassed();
             log.info("Hard filter PASSED applicationId={}", application.getId());
@@ -51,6 +56,11 @@ public class HardFilterService {
         }
 
         applicationRepository.save(application);
+
+        if (oldStatus != application.getStatus()) {
+            auditLogService.log("APPLICATION", application.getId(), oldStatus.name(),
+                    application.getStatus().name(), null, "Hard filter evaluation");
+        }
     }
 
     private boolean passesHeightCheck(User candidate, JobPosting job) {

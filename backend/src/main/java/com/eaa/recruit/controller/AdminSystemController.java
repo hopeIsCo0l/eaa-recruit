@@ -7,6 +7,7 @@ import com.eaa.recruit.dto.admin.AuditLogResponse;
 import com.eaa.recruit.dto.admin.SystemHealthResponse;
 import com.eaa.recruit.entity.AuditLog;
 import com.eaa.recruit.repository.AuditLogRepository;
+import com.eaa.recruit.repository.AuditLogSpecifications;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsAdmin;
 import com.eaa.recruit.security.rbac.IsSuperAdmin;
@@ -16,11 +17,15 @@ import com.eaa.recruit.service.SystemHealthService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -59,13 +64,28 @@ public class AdminSystemController {
         return ResponseEntity.ok(ApiResponse.success("Job archived"));
     }
 
-    /** GET /api/v1/admin/audit-logs — FR-37 */
+    /**
+     * GET /api/v1/admin/audit-logs — FR-37
+     * Paginated, filterable by entity type, entity id, actor id, and date range.
+     */
     @IsAdmin
     @GetMapping("/audit-logs")
     public ResponseEntity<ApiResponse<List<AuditLogResponse>>> getAuditLogs(
-            @PageableDefault(size = 20) Pageable pageable) {
+            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) Long entityId,
+            @RequestParam(required = false) Long actorId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @PageableDefault(size = 20, sort = "changedAt") Pageable pageable) {
 
-        Page<AuditLog> page = auditLogRepository.findAllByOrderByChangedAtDesc(pageable);
+        Specification<AuditLog> spec = Specification
+                .where(AuditLogSpecifications.entityTypeIs(entityType))
+                .and(AuditLogSpecifications.entityIdIs(entityId))
+                .and(AuditLogSpecifications.actorIs(actorId))
+                .and(AuditLogSpecifications.changedAfter(from))
+                .and(AuditLogSpecifications.changedBefore(to));
+
+        Page<AuditLog> page = auditLogRepository.findAll(spec, pageable);
         List<AuditLogResponse> responses = page.stream().map(this::toResponse).toList();
         return ResponseEntity.ok(ApiResponse.success(responses));
     }
@@ -84,11 +104,17 @@ public class AdminSystemController {
         return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
-    /** GET /api/v1/admin/system/health — FR-38 */
-    @IsSuperAdmin
-    @GetMapping("/system/health")
+    /**
+     * GET /api/v1/admin/system-health — FR-38
+     * Real-time snapshot of DB pool, Redis, Kafka lag, and uptime.
+     * Never cached — response carries Cache-Control: no-store.
+     */
+    @IsAdmin
+    @GetMapping("/system-health")
     public ResponseEntity<ApiResponse<SystemHealthResponse>> getSystemHealth() {
-        return ResponseEntity.ok(ApiResponse.success(systemHealthService.getHealth()));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(ApiResponse.success(systemHealthService.getHealth()));
     }
 
     /** POST /api/v1/admin/ai-models — FR-39 */
