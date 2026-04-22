@@ -38,16 +38,16 @@ public class AiModelVersion {
 
     protected AiModelVersion() {}
 
-    private AiModelVersion(String modelVersion, String description, User createdBy) {
+    private AiModelVersion(String modelVersion, String description, Instant activatedAt, User createdBy) {
         this.modelVersion = modelVersion;
         this.description  = description;
         this.createdBy    = createdBy;
-        this.activatedAt  = Instant.now();
+        this.activatedAt  = activatedAt != null ? activatedAt : Instant.now();
         this.createdAt    = Instant.now();
     }
 
-    public static AiModelVersion create(String modelVersion, String description, User createdBy) {
-        return new AiModelVersion(modelVersion, description, createdBy);
+    public static AiModelVersion create(String modelVersion, String description, Instant activatedAt, User createdBy) {
+        return new AiModelVersion(modelVersion, description, activatedAt, createdBy);
     }
 
     public Long    getId()           { return id; }

@@ -2,9 +2,9 @@ package com.eaa.recruit.service;
 
 import com.eaa.recruit.dto.admin.AiModelRequest;
 import com.eaa.recruit.dto.admin.AiModelResponse;
+import com.eaa.recruit.dto.admin.AiModelStateResponse;
 import com.eaa.recruit.entity.AiModelVersion;
 import com.eaa.recruit.entity.User;
-import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
 import com.eaa.recruit.repository.AiModelVersionRepository;
@@ -23,55 +23,50 @@ public class AiModelService {
 
     private final AiModelVersionRepository aiModelVersionRepository;
     private final UserRepository            userRepository;
+    private final AuditLogService           auditLogService;
 
     public AiModelService(AiModelVersionRepository aiModelVersionRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           AuditLogService auditLogService) {
         this.aiModelVersionRepository = aiModelVersionRepository;
         this.userRepository           = userRepository;
+        this.auditLogService          = auditLogService;
     }
 
+    /** FR-39: register new version, set active, audit. */
     @Transactional
-    public AiModelResponse register(AiModelRequest request, AuthenticatedUser principal) {
+    public AiModelStateResponse update(AiModelRequest request, AuthenticatedUser principal) {
         if (aiModelVersionRepository.existsByModelVersion(request.modelVersion())) {
             throw new ConflictException("Model version already registered: " + request.modelVersion());
         }
 
-        User creator = userRepository.findById(principal.id())
+        User actor = userRepository.findById(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        AiModelVersion model = AiModelVersion.create(request.modelVersion(), request.description(), creator);
-        model = aiModelVersionRepository.save(model);
-        return toResponse(model);
-    }
+        String previousVersion = aiModelVersionRepository.findByActiveTrue()
+                .map(AiModelVersion::getModelVersion)
+                .orElse(null);
 
-    @Transactional
-    public AiModelResponse activate(Long modelId) {
-        AiModelVersion model = aiModelVersionRepository.findById(modelId)
-                .orElseThrow(() -> new ResourceNotFoundException("Model not found: " + modelId));
-
-        if (model.isActive()) {
-            throw new BusinessException("Model is already active");
-        }
-
-        // Deactivate current active model, then activate new one
         aiModelVersionRepository.deactivateAll();
+
+        AiModelVersion model = AiModelVersion.create(
+                request.modelVersion(), request.description(), request.activatedAt(), actor);
         model.activate();
-        aiModelVersionRepository.save(model);
-        return toResponse(model);
+        model = aiModelVersionRepository.save(model);
+
+        auditLogService.log("AI_MODEL", model.getId(), previousVersion,
+                model.getModelVersion(), actor, "Active model updated");
+
+        return getState();
     }
 
     @Transactional(readOnly = true)
-    public List<AiModelResponse> listAll() {
-        return aiModelVersionRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public AiModelResponse getActive() {
-        return aiModelVersionRepository.findByActiveTrue()
-                .map(this::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("No active AI model version found"));
+    public AiModelStateResponse getState() {
+        List<AiModelResponse> history = aiModelVersionRepository.findAllByOrderByCreatedAtDesc()
+                .stream().map(this::toResponse).toList();
+        AiModelResponse current = aiModelVersionRepository.findByActiveTrue()
+                .map(this::toResponse).orElse(null);
+        return new AiModelStateResponse(current, history);
     }
 
     private AiModelResponse toResponse(AiModelVersion m) {
