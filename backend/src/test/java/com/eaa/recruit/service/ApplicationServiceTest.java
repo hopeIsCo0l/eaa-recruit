@@ -37,6 +37,7 @@ class ApplicationServiceTest {
     @Mock KafkaEventPublisher      kafkaEventPublisher;
     @Mock HardFilterService        hardFilterService;
     @Mock WeightedScoringService   weightedScoringService;
+    @Mock AuditLogService          auditLogService;
 
     ApplicationService service;
 
@@ -47,7 +48,7 @@ class ApplicationServiceTest {
     void setUp() {
         service = new ApplicationService(applicationRepository, jobPostingRepository,
                 userRepository, fileStorageService, kafkaEventPublisher,
-                hardFilterService, weightedScoringService);
+                hardFilterService, weightedScoringService, auditLogService);
     }
 
     private static User candidateUser() {

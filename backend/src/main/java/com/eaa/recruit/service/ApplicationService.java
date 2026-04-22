@@ -35,6 +35,7 @@ public class ApplicationService {
     private final KafkaEventPublisher    kafkaEventPublisher;
     private final HardFilterService      hardFilterService;
     private final WeightedScoringService weightedScoringService;
+    private final AuditLogService        auditLogService;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                                JobPostingRepository jobPostingRepository,
@@ -42,7 +43,8 @@ public class ApplicationService {
                                FileStorageService fileStorageService,
                                KafkaEventPublisher kafkaEventPublisher,
                                HardFilterService hardFilterService,
-                               WeightedScoringService weightedScoringService) {
+                               WeightedScoringService weightedScoringService,
+                               AuditLogService auditLogService) {
         this.applicationRepository = applicationRepository;
         this.jobPostingRepository  = jobPostingRepository;
         this.userRepository        = userRepository;
@@ -50,6 +52,7 @@ public class ApplicationService {
         this.kafkaEventPublisher   = kafkaEventPublisher;
         this.hardFilterService     = hardFilterService;
         this.weightedScoringService = weightedScoringService;
+        this.auditLogService       = auditLogService;
     }
 
     /** FR-19: Submit application with CV upload. */
@@ -101,10 +104,13 @@ public class ApplicationService {
         Application application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
 
+        ApplicationStatus oldStatus = application.getStatus();
         application.applyAiScore(request.cvRelevanceScore(), request.xaiReportUrl());
         applicationRepository.save(application);
 
         log.info("AI score applied applicationId={} score={}", applicationId, request.cvRelevanceScore());
+        auditLogService.log("APPLICATION", applicationId, oldStatus.name(),
+                application.getStatus().name(), null, "AI score callback");
 
         // FR-22: immediately run hard filter after AI score is recorded
         hardFilterService.applyHardFilter(application);
@@ -126,11 +132,14 @@ public class ApplicationService {
             throw new BusinessException("Exam score can only be applied to EXAM_AUTHORIZED applications");
         }
 
+        ApplicationStatus oldStatus = application.getStatus();
         double finalScore = weightedScoringService.compute(application);
         application.recordExamScore(request.examScore(), finalScore, request.completedAt());
         applicationRepository.save(application);
 
         log.info("Exam score applied applicationId={} examScore={} finalScore={} completedAt={}",
                 applicationId, request.examScore(), finalScore, request.completedAt());
+        auditLogService.log("APPLICATION", applicationId, oldStatus.name(),
+                application.getStatus().name(), null, "Exam score callback");
     }
 }

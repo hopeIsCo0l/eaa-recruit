@@ -1,15 +1,46 @@
 package com.eaa.recruit.dto.admin;
 
+import java.util.List;
+import java.util.Map;
+
+/**
+ * FR-38: System health snapshot. Each sub-resource carries a {@link Status}
+ * level so dashboards can alert without re-interpreting raw metrics.
+ */
 public record SystemHealthResponse(
-        DatabaseHealth database,
-        RedisHealth redis,
-        KafkaHealth kafka,
-        long uptimeSeconds
+        Status           overall,
+        DatabaseHealth   database,
+        RedisHealth      redis,
+        KafkaHealth      kafka,
+        long             uptimeSeconds
 ) {
 
-    public record DatabaseHealth(boolean up, int activeConnections, int idleConnections) {}
+    public enum Status { OK, WARNING, CRITICAL }
 
-    public record RedisHealth(boolean up, String info) {}
+    public record DatabaseHealth(
+            Status status,
+            boolean up,
+            int activeConnections,
+            int idleConnections,
+            int totalConnections,
+            int maxPoolSize) {}
 
-    public record KafkaHealth(boolean up, String details) {}
+    public record RedisHealth(
+            Status status,
+            boolean up,
+            Long   keyspaceHits,
+            Long   keyspaceMisses,
+            Double hitRatio,
+            String details) {}
+
+    public record KafkaHealth(
+            Status          status,
+            boolean         up,
+            int             brokerCount,
+            long            totalConsumerLag,
+            List<TopicLag>  topicLags,
+            String          details) {
+
+        public record TopicLag(String topic, String consumerGroup, Map<Integer, Long> partitionLag, long total) {}
+    }
 }

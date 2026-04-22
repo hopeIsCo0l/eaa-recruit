@@ -19,11 +19,14 @@ public class UserStatusService {
 
     private final UserRepository          userRepository;
     private final BlockedUserCacheService blockedUserCache;
+    private final AuditLogService         auditLogService;
 
     public UserStatusService(UserRepository userRepository,
-                             BlockedUserCacheService blockedUserCache) {
+                             BlockedUserCacheService blockedUserCache,
+                             AuditLogService auditLogService) {
         this.userRepository   = userRepository;
         this.blockedUserCache = blockedUserCache;
+        this.auditLogService  = auditLogService;
     }
 
     /**
@@ -50,6 +53,7 @@ public class UserStatusService {
             throw new BusinessException("Admins cannot modify Super Admin accounts");
         }
 
+        String oldStatus = target.isActive() ? "ACTIVE" : "INACTIVE";
         if (active) {
             target.activate();
             blockedUserCache.unblock(targetId);
@@ -58,6 +62,13 @@ public class UserStatusService {
             target.deactivate();
             blockedUserCache.block(targetId);
             log.info("User id={} deactivated by admin id={}", targetId, requester.id());
+        }
+
+        String newStatus = active ? "ACTIVE" : "INACTIVE";
+        if (!oldStatus.equals(newStatus)) {
+            auditLogService.log("USER", targetId, oldStatus, newStatus,
+                    userRepository.getReferenceById(requester.id()),
+                    active ? "Admin activated user" : "Admin deactivated user");
         }
     }
 }

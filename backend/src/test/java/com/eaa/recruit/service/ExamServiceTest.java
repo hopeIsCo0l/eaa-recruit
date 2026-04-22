@@ -39,6 +39,8 @@ class ExamServiceTest {
     @Mock ApplicationRepository     applicationRepository;
     @Mock CandidateNotificationPort candidateNotificationPort;
     @Mock KafkaEventPublisher       kafkaEventPublisher;
+    @Mock AuditLogService           auditLogService;
+    @Mock com.eaa.recruit.repository.UserRepository userRepository;
 
     ExamService service;
 
@@ -48,7 +50,8 @@ class ExamServiceTest {
     @BeforeEach
     void setUp() {
         service = new ExamService(examRepository, jobPostingRepository, applicationRepository,
-                candidateNotificationPort, kafkaEventPublisher, new ObjectMapper());
+                candidateNotificationPort, kafkaEventPublisher, new ObjectMapper(),
+                auditLogService, userRepository);
     }
 
     private static JobPosting job(User recruiter) {

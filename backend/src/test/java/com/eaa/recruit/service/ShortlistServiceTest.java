@@ -6,6 +6,8 @@ import com.eaa.recruit.entity.*;
 import com.eaa.recruit.exception.ResourceNotFoundException;
 import com.eaa.recruit.notification.CandidateNotificationPort;
 import com.eaa.recruit.repository.ApplicationRepository;
+import com.eaa.recruit.repository.UserRepository;
+import com.eaa.recruit.security.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,12 +28,18 @@ class ShortlistServiceTest {
 
     @Mock ApplicationRepository     applicationRepository;
     @Mock CandidateNotificationPort candidateNotificationPort;
+    @Mock AuditLogService           auditLogService;
+    @Mock UserRepository            userRepository;
 
     ShortlistService service;
 
+    private static final AuthenticatedUser RECRUITER =
+            new AuthenticatedUser(42L, "r@eaa.com", "RECRUITER");
+
     @BeforeEach
     void setUp() {
-        service = new ShortlistService(applicationRepository, candidateNotificationPort);
+        service = new ShortlistService(applicationRepository, candidateNotificationPort,
+                auditLogService, userRepository);
     }
 
     private Application makeExamCompletedApp(Long fakeId) {
@@ -53,7 +61,7 @@ class ShortlistServiceTest {
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(app));
         when(applicationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        ShortlistResponse response = service.shortlist(new ShortlistRequest(List.of(1L)));
+        ShortlistResponse response = service.shortlist(new ShortlistRequest(List.of(1L)), RECRUITER);
 
         assertThat(response.shortlisted()).isEqualTo(1);
         assertThat(response.skipped()).isEqualTo(0);
@@ -71,7 +79,7 @@ class ShortlistServiceTest {
 
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(app));
 
-        ShortlistResponse response = service.shortlist(new ShortlistRequest(List.of(1L)));
+        ShortlistResponse response = service.shortlist(new ShortlistRequest(List.of(1L)), RECRUITER);
 
         assertThat(response.shortlisted()).isEqualTo(0);
         assertThat(response.skipped()).isEqualTo(1);
@@ -82,7 +90,7 @@ class ShortlistServiceTest {
     void shortlist_throwsResourceNotFoundException_whenNotFound() {
         when(applicationRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.shortlist(new ShortlistRequest(List.of(99L))))
+        assertThatThrownBy(() -> service.shortlist(new ShortlistRequest(List.of(99L)), RECRUITER))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 }

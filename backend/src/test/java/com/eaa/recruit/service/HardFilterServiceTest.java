@@ -21,12 +21,13 @@ class HardFilterServiceTest {
 
     @Mock ApplicationRepository       applicationRepository;
     @Mock CandidateNotificationPort   candidateNotificationPort;
+    @Mock AuditLogService             auditLogService;
 
     HardFilterService service;
 
     @BeforeEach
     void setUp() {
-        service = new HardFilterService(applicationRepository, candidateNotificationPort);
+        service = new HardFilterService(applicationRepository, candidateNotificationPort, auditLogService);
     }
 
     private static User candidateWithProfile(Integer heightCm, Integer weightKg, String degree) {

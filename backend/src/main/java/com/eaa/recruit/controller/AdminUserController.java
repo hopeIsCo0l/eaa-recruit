@@ -34,9 +34,10 @@ public class AdminUserController {
      */
     @PostMapping("/recruiter")
     public ResponseEntity<ApiResponse<RecruiterCreatedResponse>> createRecruiter(
-            @Valid @RequestBody CreateRecruiterRequest request) {
+            @Valid @RequestBody CreateRecruiterRequest request,
+            @AuthenticationPrincipal AuthenticatedUser requester) {
 
-        RecruiterCreatedResponse response = recruiterAdminService.createRecruiter(request);
+        RecruiterCreatedResponse response = recruiterAdminService.createRecruiter(request, requester);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Recruiter account created successfully", response));
     }
