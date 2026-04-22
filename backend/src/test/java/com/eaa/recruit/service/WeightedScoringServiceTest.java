@@ -35,7 +35,7 @@ class WeightedScoringServiceTest {
         if (Boolean.TRUE.equals(hfPassed))  app.markHardFilterPassed();
         if (Boolean.FALSE.equals(hfPassed)) app.markHardFilterFailed();
         app.authorizeExam("token");
-        app.recordExamScore(examScore, 0.0); // finalScore placeholder
+        app.recordExamScore(examScore, 0.0, java.time.Instant.now()); // finalScore placeholder
         return app;
     }
 
