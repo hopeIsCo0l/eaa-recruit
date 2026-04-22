@@ -43,7 +43,7 @@ class ShortlistServiceTest {
         app.applyAiScore(0.8, "url");
         app.markHardFilterPassed();
         app.authorizeExam("token");
-        app.recordExamScore(80.0, 72.0);
+        app.recordExamScore(80.0, 72.0, java.time.Instant.now());
         return app;
     }
 

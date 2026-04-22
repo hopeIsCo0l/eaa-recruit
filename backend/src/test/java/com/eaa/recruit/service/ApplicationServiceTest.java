@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -138,10 +139,12 @@ class ApplicationServiceTest {
         when(weightedScoringService.compute(app)).thenReturn(72.0);
         when(applicationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.applyExamScore(5L, new ExamScoreCallbackRequest(80.0));
+        Instant completedAt = Instant.now();
+        service.applyExamScore(5L, new ExamScoreCallbackRequest(80.0, completedAt));
 
         assertThat(app.getStatus()).isEqualTo(ApplicationStatus.EXAM_COMPLETED);
         assertThat(app.getExamScore()).isEqualTo(80.0);
+        assertThat(app.getExamCompletedAt()).isEqualTo(completedAt);
     }
 
     @Test
@@ -154,7 +157,29 @@ class ApplicationServiceTest {
 
         when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
 
-        assertThatThrownBy(() -> service.applyExamScore(5L, new ExamScoreCallbackRequest(80.0)))
+        assertThatThrownBy(() -> service.applyExamScore(5L, new ExamScoreCallbackRequest(80.0, Instant.now())))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void applyExamScore_isIdempotent_whenAlreadyCompleted() {
+        User recruiter  = User.create("r@eaa.com", "hash", Role.RECRUITER, "Alice");
+        JobPosting job  = openJob(recruiter);
+        User candidate  = candidateUser();
+        Application app = Application.create(candidate, job, "cv.pdf");
+        app.applyAiScore(0.8, "http://report");
+        app.markHardFilterPassed();
+        app.authorizeExam("token");
+        app.recordExamScore(80.0, 72.0, Instant.now());
+        // status now EXAM_COMPLETED
+
+        when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
+
+        // Duplicate callback must not throw and must not re-save or recompute
+        service.applyExamScore(5L, new ExamScoreCallbackRequest(95.0, Instant.now()));
+
+        assertThat(app.getExamScore()).isEqualTo(80.0); // unchanged
+        verify(applicationRepository, never()).save(any());
+        verifyNoInteractions(weightedScoringService);
     }
 }

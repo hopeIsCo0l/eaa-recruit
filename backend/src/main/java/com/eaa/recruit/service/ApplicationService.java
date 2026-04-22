@@ -116,15 +116,21 @@ public class ApplicationService {
         Application application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
 
+        // Idempotency — duplicate callback for an already-completed exam is a no-op
+        if (application.getStatus() == ApplicationStatus.EXAM_COMPLETED) {
+            log.info("Exam score already applied applicationId={} — ignoring duplicate callback", applicationId);
+            return;
+        }
+
         if (application.getStatus() != ApplicationStatus.EXAM_AUTHORIZED) {
             throw new BusinessException("Exam score can only be applied to EXAM_AUTHORIZED applications");
         }
 
         double finalScore = weightedScoringService.compute(application);
-        application.recordExamScore(request.examScore(), finalScore);
+        application.recordExamScore(request.examScore(), finalScore, request.completedAt());
         applicationRepository.save(application);
 
-        log.info("Exam score applied applicationId={} examScore={} finalScore={}",
-                applicationId, request.examScore(), finalScore);
+        log.info("Exam score applied applicationId={} examScore={} finalScore={} completedAt={}",
+                applicationId, request.examScore(), finalScore, request.completedAt());
     }
 }

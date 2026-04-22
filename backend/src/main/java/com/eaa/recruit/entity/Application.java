@@ -61,6 +61,9 @@ public class Application extends BaseEntity {
     @Column(name = "submitted_at", nullable = false, updatable = false)
     private Instant submittedAt;
 
+    @Column(name = "exam_completed_at")
+    private Instant examCompletedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "interview_slot_id")
     private AvailabilitySlot interviewSlot;
@@ -105,6 +108,7 @@ public class Application extends BaseEntity {
     public String            getXaiReportUrl()     { return xaiReportUrl; }
     public String            getExamToken()        { return examToken; }
     public Instant           getSubmittedAt()      { return submittedAt; }
+    public Instant           getExamCompletedAt()  { return examCompletedAt; }
     public AvailabilitySlot  getInterviewSlot()    { return interviewSlot; }
     public boolean           isReminderSent()      { return reminderSent; }
     public String            getDecisionNotes()    { return decisionNotes; }
@@ -137,10 +141,11 @@ public class Application extends BaseEntity {
         this.status    = ApplicationStatus.EXAM_AUTHORIZED;
     }
 
-    public void recordExamScore(double score, double computedFinalScore) {
-        this.examScore  = score;
-        this.finalScore = computedFinalScore;
-        this.status     = ApplicationStatus.EXAM_COMPLETED;
+    public void recordExamScore(double score, double computedFinalScore, Instant completedAt) {
+        this.examScore        = score;
+        this.finalScore       = computedFinalScore;
+        this.examCompletedAt  = completedAt;
+        this.status           = ApplicationStatus.EXAM_COMPLETED;
     }
 
     public void shortlist() {
