@@ -14,6 +14,7 @@ import com.eaa.recruit.security.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -100,7 +101,7 @@ public class SlotBookingService {
                     slot.getSlotDate().toString(),
                     slot.getStartTime().toString());
 
-        } catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException | ObjectOptimisticLockingFailureException e) {
             throw new ConflictException("Slot was taken concurrently — please choose another");
         }
     }

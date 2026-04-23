@@ -53,6 +53,7 @@ class InterviewReminderSchedulerTest {
         scheduler.sendReminders();
 
         verify(candidateNotificationPort).notifyInterviewReminder(any(), any(), any(), any(), any());
+        verify(candidateNotificationPort).notifyRecruiterInterviewReminder(any(), any(), any(), any(), any(), any());
         verify(applicationRepository).save(app);
     }
 

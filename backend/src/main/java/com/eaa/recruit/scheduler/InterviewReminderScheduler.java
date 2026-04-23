@@ -46,12 +46,21 @@ public class InterviewReminderScheduler {
 
         for (Application application : upcoming) {
             try {
+                String jobTitle    = application.getJob().getTitle();
+                String slotDate    = application.getInterviewSlot().getSlotDate().toString();
+                String startTime   = application.getInterviewSlot().getStartTime().toString();
+
                 candidateNotificationPort.notifyInterviewReminder(
                         application.getCandidate().getEmail(),
                         application.getCandidate().getFullName(),
-                        application.getJob().getTitle(),
-                        application.getInterviewSlot().getSlotDate().toString(),
-                        application.getInterviewSlot().getStartTime().toString());
+                        jobTitle, slotDate, startTime);
+
+                candidateNotificationPort.notifyRecruiterInterviewReminder(
+                        application.getJob().getCreatedBy().getEmail(),
+                        application.getJob().getCreatedBy().getFullName(),
+                        jobTitle,
+                        application.getCandidate().getFullName(),
+                        slotDate, startTime);
 
                 application.markReminderSent();
                 applicationRepository.save(application);

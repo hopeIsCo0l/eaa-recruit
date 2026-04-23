@@ -5,6 +5,7 @@ import com.eaa.recruit.entity.*;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import com.eaa.recruit.notification.CandidateNotificationPort;
 import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.repository.AvailabilitySlotRepository;
@@ -193,5 +194,21 @@ class SlotBookingServiceTest {
         assertThatThrownBy(() -> service.bookSlot(1L, 100L, CANDIDATE))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("does not belong");
+    }
+
+    @Test
+    void bookSlot_throwsConflict_onOptimisticLockingFailure() {
+        User rec = recruiter(7L);
+        JobPosting j = job(rec);
+        Application app = shortlisted(candidate(), j);
+        AvailabilitySlot s = slot(rec, 100L, false);
+
+        when(applicationRepository.findByCandidateIdAndJobId(10L, 1L)).thenReturn(Optional.of(app));
+        when(slotRepository.findById(100L)).thenReturn(Optional.of(s));
+        when(slotRepository.save(any())).thenThrow(new ObjectOptimisticLockingFailureException("slot", 100L));
+
+        assertThatThrownBy(() -> service.bookSlot(1L, 100L, CANDIDATE))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("concurrently");
     }
 }
