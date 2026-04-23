@@ -12,4 +12,7 @@ public interface CandidateNotificationPort {
 
     void notifyInterviewReminder(String email, String fullName, String jobTitle,
                                   String slotDate, String startTime);
+
+    void notifyBookingConfirmed(String email, String fullName, String jobTitle,
+                                 String slotDate, String startTime);
 }

@@ -1,21 +1,21 @@
 package com.eaa.recruit.controller;
 
 import com.eaa.recruit.dto.ApiResponse;
-import com.eaa.recruit.dto.application.SlotBookingRequest;
-import com.eaa.recruit.repository.AvailabilitySlotRepository;
+import com.eaa.recruit.dto.availability.AvailabilitySlotResponse;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsCandidate;
 import com.eaa.recruit.service.SlotBookingService;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
- * FR-30/31: Candidate books an interview slot.
+ * FR-30/31: Candidate lists and books interview slots for a job.
  */
 @RestController
-@RequestMapping("/api/v1/applications")
+@RequestMapping("/api/v1/jobs/{jobId}/slots")
 public class SlotBookingController {
 
     private final SlotBookingService slotBookingService;
@@ -24,15 +24,26 @@ public class SlotBookingController {
         this.slotBookingService = slotBookingService;
     }
 
-    /** POST /api/v1/applications/{id}/book-slot */
+    /** GET /api/v1/jobs/{jobId}/slots — list unbooked slots for the candidate's shortlisted job. */
     @IsCandidate
-    @PostMapping("/{id}/book-slot")
-    public ResponseEntity<ApiResponse<Void>> bookSlot(
-            @PathVariable("id") Long applicationId,
-            @Valid @RequestBody SlotBookingRequest request,
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<AvailabilitySlotResponse>>> listAvailable(
+            @PathVariable Long jobId,
             @AuthenticationPrincipal AuthenticatedUser principal) {
 
-        slotBookingService.bookSlot(applicationId, request, principal);
+        List<AvailabilitySlotResponse> slots = slotBookingService.listAvailableForJob(jobId, principal);
+        return ResponseEntity.ok(ApiResponse.success(slots));
+    }
+
+    /** POST /api/v1/jobs/{jobId}/slots/{slotId}/book — book a slot. */
+    @IsCandidate
+    @PostMapping("/{slotId}/book")
+    public ResponseEntity<ApiResponse<Void>> book(
+            @PathVariable Long jobId,
+            @PathVariable Long slotId,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+
+        slotBookingService.bookSlot(jobId, slotId, principal);
         return ResponseEntity.ok(ApiResponse.success("Interview slot booked"));
     }
 }
