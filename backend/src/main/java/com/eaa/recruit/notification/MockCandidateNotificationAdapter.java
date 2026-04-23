@@ -47,4 +47,11 @@ public class MockCandidateNotificationAdapter implements CandidateNotificationPo
         log.info("[MOCK NOTIFY] Interview booked — to='{}' name='{}' job='{}' date='{}' time='{}'",
                 email, fullName, jobTitle, slotDate, startTime);
     }
+
+    @Override
+    public void notifyRecruiterInterviewReminder(String email, String recruiterName, String jobTitle,
+                                                  String candidateName, String slotDate, String startTime) {
+        log.info("[MOCK NOTIFY] Interview reminder (recruiter) — to='{}' recruiter='{}' job='{}' candidate='{}' date='{}' time='{}'",
+                email, recruiterName, jobTitle, candidateName, slotDate, startTime);
+    }
 }

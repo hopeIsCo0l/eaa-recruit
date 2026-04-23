@@ -10,7 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * FR-34: Candidate views their feedback report.
+ * FR-34: Aggregates stored application data into a feedback report.
+ * Candidates see their own applications; recruiters see any application for their jobs.
  */
 @Service
 public class FeedbackReportService {
@@ -26,12 +27,21 @@ public class FeedbackReportService {
         Application application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
 
-        if (!application.getCandidate().getId().equals(principal.id())) {
-            throw new BusinessException("You can only view feedback for your own applications");
+        String role = principal.role();
+
+        if ("CANDIDATE".equals(role)) {
+            if (!application.getCandidate().getId().equals(principal.id())) {
+                throw new BusinessException("You can only view feedback for your own applications");
+            }
+        } else if ("RECRUITER".equals(role)) {
+            if (!application.getJob().getCreatedBy().getId().equals(principal.id())) {
+                throw new BusinessException("You can only view feedback for applications on your jobs");
+            }
         }
 
+        // AC: 404 if no final decision yet
         if (!application.hasFinalDecision()) {
-            throw new BusinessException("Feedback not available until a final decision is made");
+            throw new ResourceNotFoundException("Feedback report not available — no final decision recorded yet");
         }
 
         return new FeedbackReportResponse(
@@ -43,6 +53,7 @@ public class FeedbackReportService {
                 application.getHardFilterPassed(),
                 application.getFinalScore(),
                 application.getXaiReportUrl(),
+                // Candidates see decision notes (it's their own feedback); recruiters see all
                 application.getDecisionNotes());
     }
 }

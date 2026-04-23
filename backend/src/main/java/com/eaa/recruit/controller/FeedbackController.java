@@ -5,6 +5,7 @@ import com.eaa.recruit.dto.application.DecisionRequest;
 import com.eaa.recruit.dto.application.DecisionResponse;
 import com.eaa.recruit.dto.application.FeedbackReportResponse;
 import com.eaa.recruit.security.AuthenticatedUser;
+import com.eaa.recruit.security.rbac.IsAuthenticated;
 import com.eaa.recruit.security.rbac.IsCandidate;
 import com.eaa.recruit.security.rbac.IsRecruiter;
 import com.eaa.recruit.service.FeedbackReportService;
@@ -51,8 +52,8 @@ public class FeedbackController {
         return ResponseEntity.ok(ApiResponse.success("Decision recorded", response));
     }
 
-    /** GET /api/v1/applications/{id}/feedback — FR-34 */
-    @IsCandidate
+    /** GET /api/v1/applications/{id}/feedback — FR-34: candidate + recruiter */
+    @IsAuthenticated
     @GetMapping("/{id}/feedback")
     public ResponseEntity<ApiResponse<FeedbackReportResponse>> getFeedback(
             @PathVariable("id") Long applicationId,

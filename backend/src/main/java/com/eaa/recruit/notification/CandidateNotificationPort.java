@@ -15,4 +15,7 @@ public interface CandidateNotificationPort {
 
     void notifyBookingConfirmed(String email, String fullName, String jobTitle,
                                  String slotDate, String startTime);
+
+    void notifyRecruiterInterviewReminder(String email, String recruiterName, String jobTitle,
+                                           String candidateName, String slotDate, String startTime);
 }
