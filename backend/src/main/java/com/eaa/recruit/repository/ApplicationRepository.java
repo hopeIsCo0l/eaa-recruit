@@ -11,10 +11,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
     boolean existsByCandidateIdAndJobId(Long candidateId, Long jobId);
+
+    Optional<Application> findByCandidateIdAndJobId(Long candidateId, Long jobId);
 
     List<Application> findByJobId(Long jobId);
 
