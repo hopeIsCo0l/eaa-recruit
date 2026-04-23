@@ -136,8 +136,7 @@ class ApplicationServiceTest {
         app.authorizeExam("token");
 
         when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
-        when(weightedScoringService.compute(app)).thenReturn(72.0);
-        when(applicationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(weightedScoringService.computeAndPersist(app)).thenReturn(72.0);
 
         Instant completedAt = Instant.now();
         service.applyExamScore(5L, new ExamScoreCallbackRequest(80.0, completedAt));

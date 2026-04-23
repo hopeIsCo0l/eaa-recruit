@@ -46,6 +46,7 @@ public class WeightedScoringService {
                                 ? application.getExamScore() * 0.4 : 0.0);
         double hfComponent   = Boolean.TRUE.equals(hardFilterPassed) ? 100 * 0.2 : 0.0;
 
-        return cvComponent + examComponent + hfComponent;
+        double total = cvComponent + examComponent + hfComponent;
+        return Math.round(total * 100.0) / 100.0;
     }
 }
