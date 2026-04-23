@@ -59,4 +59,11 @@ class WeightedScoringServiceTest {
         // (0.5 * 100 * 0.4) + (50 * 0.4) + (100 * 0.2) = 20 + 20 + 20 = 60
         assertThat(service.compute(app)).isCloseTo(60.0, offset(0.001));
     }
+
+    @Test
+    void compute_roundsToTwoDecimals() {
+        Application app = makeApp(0.333, 33.33, true);
+        // raw: 13.32 + 13.332 + 20 = 46.652 → round HALF_UP 2dp = 46.65
+        assertThat(service.compute(app)).isEqualTo(46.65);
+    }
 }

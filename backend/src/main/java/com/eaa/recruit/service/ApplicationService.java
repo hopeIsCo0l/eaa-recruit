@@ -108,6 +108,9 @@ public class ApplicationService {
 
         // FR-22: immediately run hard filter after AI score is recorded
         hardFilterService.applyHardFilter(application);
+
+        // FR-28: recompute weighted final score once hard-filter outcome known
+        weightedScoringService.computeAndPersist(application);
     }
 
     /** FR-27: Receive exam score from Go engine, recompute weighted final score. */
@@ -126,9 +129,9 @@ public class ApplicationService {
             throw new BusinessException("Exam score can only be applied to EXAM_AUTHORIZED applications");
         }
 
-        double finalScore = weightedScoringService.compute(application);
-        application.recordExamScore(request.examScore(), finalScore, request.completedAt());
-        applicationRepository.save(application);
+        // FR-28: examScore must be set on entity BEFORE compute, else exam component = 0
+        application.recordExamScore(request.examScore(), 0.0, request.completedAt());
+        double finalScore = weightedScoringService.computeAndPersist(application);
 
         log.info("Exam score applied applicationId={} examScore={} finalScore={} completedAt={}",
                 applicationId, request.examScore(), finalScore, request.completedAt());
