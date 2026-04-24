@@ -5,8 +5,9 @@ import type { UserRole } from '@/types/auth'
 import {
   LayoutDashboard, Briefcase, FileText, BookOpen, Calendar,
   Trophy, Users, Activity, ScrollText, BarChart3, Brain,
-  ClipboardList, Settings, LogOut, Plane,
+  ClipboardList, Settings, LogOut,
 } from 'lucide-react'
+import { EaaLogo } from '@/components/EaaLogo'
 
 interface NavItem {
   label: string
@@ -59,9 +60,7 @@ export function Sidebar({ onClose }: SidebarProps) {
     <aside className="flex flex-col h-full bg-card border-r border-border w-64">
       {/* Brand */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
-        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-          <Plane className="h-4 w-4 text-white" />
-        </div>
+        <EaaLogo size={32} className="shrink-0" />
         <div>
           <p className="font-semibold text-foreground text-sm">EAA Recruit</p>
           <p className="text-xs text-muted-foreground capitalize">{user?.role?.toLowerCase().replace('_', ' ')}</p>
