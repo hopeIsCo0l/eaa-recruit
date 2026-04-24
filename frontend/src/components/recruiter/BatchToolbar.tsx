@@ -2,48 +2,49 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { applicationsApi } from '@/api/applications'
+import { applicationsApi, type ApplicationStatus } from '@/api/applications'
+import { showToast } from '@/hooks/useToast'
+
+export interface SelectedApp {
+  id: number
+  status: ApplicationStatus
+}
 
 interface Props {
-  selectedIds: number[]
-  jobId: number
+  selectedApps: SelectedApp[]
   onDone: () => void
 }
 
-type Action = 'shortlist' | 'reject' | 'select' | 'waitlist'
+type Action = 'authorize' | 'reject'
 
-const ACTION_LABELS: Record<Action, string> = {
-  shortlist: 'Shortlist',
-  reject: 'Reject',
-  select: 'Select',
-  waitlist: 'Waitlist',
-}
-
-const ACTION_VARIANT: Record<Action, 'default' | 'destructive' | 'outline'> = {
-  shortlist: 'default',
-  reject: 'destructive',
-  select: 'default',
-  waitlist: 'outline',
-}
-
-export function BatchToolbar({ selectedIds, onDone }: Props) {
+export function BatchToolbar({ selectedApps, onDone }: Props) {
   const [pending, setPending] = useState<Action | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const eligibleIds = selectedApps.filter((a) => a.status === 'AI_SCREENING').map((a) => a.id)
+  const allIds = selectedApps.map((a) => a.id)
+  const skipped = selectedApps.length - eligibleIds.length
 
   const confirm = async () => {
     if (!pending) return
     setLoading(true)
     try {
-      if (pending === 'shortlist') {
-        await applicationsApi.shortlist(selectedIds)
+      if (pending === 'authorize') {
+        await applicationsApi.authorizeExam(eligibleIds)
+        showToast({
+          title: `${eligibleIds.length} candidate${eligibleIds.length !== 1 ? 's' : ''} authorized for exam`,
+          variant: 'success',
+        })
       } else {
-        const decision =
-          pending === 'reject' ? 'REJECTED' : pending === 'select' ? 'SELECTED' : 'WAITLISTED'
-        await Promise.all(selectedIds.map((id) => applicationsApi.recordDecision(id, decision)))
+        await Promise.all(allIds.map((id) => applicationsApi.recordDecision(id, 'REJECTED')))
+        showToast({
+          title: `${allIds.length} candidate${allIds.length !== 1 ? 's' : ''} rejected`,
+          variant: 'default',
+        })
       }
       onDone()
     } catch {
-      // keep toolbar open — user can retry
+      showToast({ title: 'Action failed — please try again', variant: 'error' })
     } finally {
       setLoading(false)
       setPending(null)
@@ -54,19 +55,23 @@ export function BatchToolbar({ selectedIds, onDone }: Props) {
     <>
       <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg border border-border">
         <span className="text-sm text-muted-foreground font-medium">
-          {selectedIds.length} selected
+          {selectedApps.length} selected
         </span>
         <div className="flex gap-2 ml-auto flex-wrap">
-          {(Object.keys(ACTION_LABELS) as Action[]).map((action) => (
-            <Button
-              key={action}
-              size="sm"
-              variant={ACTION_VARIANT[action]}
-              onClick={() => setPending(action)}
-            >
-              {ACTION_LABELS[action]}
-            </Button>
-          ))}
+          <Button
+            size="sm"
+            disabled={eligibleIds.length === 0}
+            onClick={() => setPending('authorize')}
+            title={eligibleIds.length === 0 ? 'Select candidates in AI Screening stage to authorize' : undefined}
+          >
+            Authorize for Exam
+            {eligibleIds.length > 0 && eligibleIds.length < selectedApps.length && (
+              <span className="ml-1 opacity-70 text-xs">({eligibleIds.length})</span>
+            )}
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setPending('reject')}>
+            Send Rejection
+          </Button>
         </div>
       </div>
 
@@ -75,21 +80,37 @@ export function BatchToolbar({ selectedIds, onDone }: Props) {
           <DialogHeader>
             <DialogTitle>Confirm Batch Action</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {pending && (
+          <div className="text-sm text-muted-foreground space-y-1">
+            {pending === 'authorize' && (
               <>
-                <span className="font-medium text-foreground">{ACTION_LABELS[pending]}</span>{' '}
-                {selectedIds.length} candidate{selectedIds.length !== 1 ? 's' : ''}? This cannot be undone.
+                <p>
+                  Authorize{' '}
+                  <span className="font-medium text-foreground">{eligibleIds.length}</span>{' '}
+                  candidate{eligibleIds.length !== 1 ? 's' : ''} for the exam?
+                </p>
+                {skipped > 0 && (
+                  <p className="text-xs">
+                    {skipped} selected candidate{skipped !== 1 ? 's' : ''} skipped — only{' '}
+                    <span className="font-medium text-foreground">AI Screening</span> stage candidates can be authorized.
+                  </p>
+                )}
               </>
             )}
-          </p>
+            {pending === 'reject' && (
+              <p>
+                Send rejection to{' '}
+                <span className="font-medium text-foreground">{allIds.length}</span>{' '}
+                candidate{allIds.length !== 1 ? 's' : ''}? This cannot be undone.
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPending(null)}>
               Cancel
             </Button>
             <Button
               onClick={confirm}
-              disabled={loading}
+              disabled={loading || (pending === 'authorize' && eligibleIds.length === 0)}
               variant={pending === 'reject' ? 'destructive' : 'default'}
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

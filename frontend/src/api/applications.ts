@@ -16,6 +16,7 @@ export interface Application {
   id: number
   jobId: number
   jobTitle: string
+  candidateName?: string
   status: ApplicationStatus
   cvRelevanceScore?: number
   examScore?: number
@@ -74,4 +75,7 @@ export const applicationsApi = {
 
   authorizeExamBatch: (examId: number, applicationIds: number[]) =>
     apiClient.post(`/exams/${examId}/authorize-batch`, { applicationIds }),
+
+  authorizeExam: (applicationIds: number[]) =>
+    apiClient.post('/applications/authorize-exam', { applicationIds }),
 }

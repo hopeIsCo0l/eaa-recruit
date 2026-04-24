@@ -92,14 +92,18 @@ export function InterviewSlotPage() {
               {daySlots.map((slot) => (
                 <button
                   key={slot.id}
-                  onClick={() => { setSelected(slot); setConfirmOpen(true) }}
+                  disabled={slot.booked}
+                  onClick={() => { if (!slot.booked) { setSelected(slot); setConfirmOpen(true) } }}
                   className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-                    selected?.id === slot.id
+                    slot.booked
+                      ? 'border-border bg-secondary/40 text-muted-foreground cursor-not-allowed opacity-50'
+                      : selected?.id === slot.id
                       ? 'border-primary bg-primary/10'
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
                   {slot.startTime} – {slot.endTime}
+                  {slot.booked && <span className="ml-1 text-xs">(Booked)</span>}
                 </button>
               ))}
             </div>
