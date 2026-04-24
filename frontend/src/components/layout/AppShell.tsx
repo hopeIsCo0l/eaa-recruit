@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Sidebar } from './Sidebar'
 import { Toaster } from '@/components/ui/toaster'
+import { EaaLogo } from '@/components/EaaLogo'
 
 export function AppShell() {
   const { isAuthenticated } = useAuthStore()
@@ -38,6 +39,7 @@ export function AppShell() {
           <button onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5 text-foreground" />
           </button>
+          <EaaLogo size={24} />
           <span className="font-semibold text-foreground">EAA Recruit</span>
         </header>
 
