@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import apiClient from '@/api/client'
+import { showToast } from '@/hooks/useToast'
 
 interface Question {
   id: number
@@ -22,11 +23,13 @@ interface ExamSession {
 
 export function ExamPage() {
   const [session, setSession] = useState<ExamSession | null>(null)
+  const [sessionLoading, setSessionLoading] = useState(true)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [currentIdx, setCurrentIdx] = useState(0)
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [submitted, setSubmitted] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -36,14 +39,20 @@ export function ExamPage() {
         setSecondsLeft(r.data.data.durationMinutes * 60)
       })
       .catch(() => {})
+      .finally(() => setSessionLoading(false))
   }, [])
 
   const submitExam = useCallback(async () => {
     if (!session) return
+    setSubmitting(true)
     try {
       await apiClient.post(`/exam/${session.examId}/submit`, { token: session.token })
       setSubmitted(true)
-    } catch { /* no-op */ }
+    } catch {
+      showToast({ title: 'Submission failed', description: 'Please try again. Your answers are saved.', variant: 'error' })
+    } finally {
+      setSubmitting(false)
+    }
   }, [session])
 
   useEffect(() => {
@@ -99,6 +108,14 @@ export function ExamPage() {
     )
   }
 
+  if (sessionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   if (!session) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -113,7 +130,6 @@ export function ExamPage() {
   const progressPct = (answeredCount / totalCount) * 100
 
   return (
-    // Sidebar is hidden via router — full-screen layout
     <div className="max-w-2xl mx-auto space-y-4">
       {/* Timer + progress */}
       <div className="flex items-center justify-between">
@@ -172,7 +188,7 @@ export function ExamPage() {
             Next <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
-          <Button onClick={() => setConfirmLeave(true)} variant="default">
+          <Button onClick={() => setConfirmLeave(true)}>
             Submit Exam
           </Button>
         )}
@@ -210,7 +226,10 @@ export function ExamPage() {
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmLeave(false)}>Cancel</Button>
-            <Button onClick={submitExam}>Submit</Button>
+            <Button onClick={submitExam} disabled={submitting}>
+              {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Submit
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
