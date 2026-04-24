@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, Circle, Clock, XCircle, AlertCircle } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, XCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { applicationsApi, type Application, type ApplicationStatus } from '@/api/applications'
+import { showToast } from '@/hooks/useToast'
 
 const STAGES: { status: ApplicationStatus[]; label: string }[] = [
-  { status: ['SUBMITTED'],          label: 'Applied' },
-  { status: ['AI_SCREENING'],       label: 'AI Screening' },
-  { status: ['EXAM_AUTHORIZED', 'EXAM_COMPLETED'], label: 'Exam' },
-  { status: ['SHORTLISTED', 'INTERVIEW_SCHEDULED'], label: 'Interview' },
-  { status: ['SELECTED', 'REJECTED', 'WAITLISTED'], label: 'Decision' },
+  { status: ['SUBMITTED'],                              label: 'Applied' },
+  { status: ['AI_SCREENING', 'HARD_FILTER_FAILED'],     label: 'AI Screening' },
+  { status: ['EXAM_AUTHORIZED', 'EXAM_COMPLETED'],      label: 'Exam' },
+  { status: ['SHORTLISTED', 'INTERVIEW_SCHEDULED'],     label: 'Interview' },
+  { status: ['SELECTED', 'REJECTED', 'WAITLISTED'],     label: 'Decision' },
 ]
 
 const STATUS_VARIANT: Record<ApplicationStatus, 'default' | 'success' | 'destructive' | 'warning' | 'secondary' | 'outline'> = {
@@ -39,8 +40,8 @@ function Timeline({ app }: { app: Application }) {
   return (
     <div className="flex items-center gap-0">
       {STAGES.map((stage, i) => {
-        const done    = i < currentStageIdx
-        const current = i === currentStageIdx
+        const done        = i < currentStageIdx
+        const current     = i === currentStageIdx
         const stageFailed = failed && i === 1
 
         return (
@@ -63,14 +64,27 @@ function Timeline({ app }: { app: Application }) {
 
 export function ApplicationsPage() {
   const [apps, setApps] = useState<Application[]>([])
+  const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<number | null>(null)
 
   useEffect(() => {
-    const load = () => applicationsApi.list().then((r) => setApps(r.data.data)).catch(() => {})
-    load()
+    const load = () =>
+      applicationsApi.list()
+        .then((r) => setApps(r.data.data))
+        .catch(() => showToast({ title: 'Failed to load applications', variant: 'error' }))
+
+    load().finally(() => setLoading(false))
     const interval = setInterval(load, 30_000)
     return () => clearInterval(interval)
   }, [])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   if (apps.length === 0)
     return <p className="text-muted-foreground text-center py-16">No applications yet. Browse jobs to apply!</p>

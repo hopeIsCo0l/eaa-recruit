@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter as DFooter } from '@/components/ui/dialog'
 import { jobsApi, type JobPosting } from '@/api/jobs'
 import { applicationsApi } from '@/api/applications'
+import { showToast } from '@/hooks/useToast'
 
 export function JobBoardPage() {
   const [jobs, setJobs] = useState<JobPosting[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [applied, setApplied] = useState<Set<number>>(new Set())
   const [applyJobId, setApplyJobId] = useState<number | null>(null)
@@ -20,7 +22,17 @@ export function JobBoardPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    jobsApi.list({ status: 'OPEN' }).then((r) => setJobs(r.data.data)).catch(() => {})
+    Promise.all([
+      jobsApi.list({ status: 'OPEN' }),
+      applicationsApi.list(),
+    ])
+      .then(([jobsRes, appsRes]) => {
+        setJobs(jobsRes.data.data)
+        const appliedIds = new Set(appsRes.data.data.map((a) => a.jobId))
+        setApplied(appliedIds)
+      })
+      .catch(() => showToast({ title: 'Failed to load jobs', variant: 'error' }))
+      .finally(() => setLoading(false))
   }, [])
 
   const filtered = jobs.filter(
@@ -62,6 +74,7 @@ export function JobBoardPage() {
       setApplied((prev) => new Set([...prev, applyJobId]))
       setApplyJobId(null)
       setFile(null)
+      showToast({ title: 'Application submitted', variant: 'success' })
     } catch {
       setFileError('Submission failed — please try again')
     } finally {
@@ -84,40 +97,44 @@ export function JobBoardPage() {
         </div>
       </div>
 
-      {filtered.length === 0 && (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : filtered.length === 0 ? (
         <p className="text-muted-foreground text-center py-16">No open positions found.</p>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map((job) => (
-          <Card key={job.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-base">{job.title}</CardTitle>
-                {applied.has(job.id) && <Badge variant="success">Applied</Badge>}
-              </div>
-              <CardDescription className="line-clamp-2">{job.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-1 text-sm text-muted-foreground">
-              <p>Degree: <span className="text-foreground">{job.requiredDegree}</span></p>
-              <p>Min height: <span className="text-foreground">{job.minHeightCm} cm</span></p>
-              <p>Closes: <span className="text-foreground">{job.closeDate}</span></p>
-              <p>Exam: <span className="text-foreground">{job.examDate}</span></p>
-            </CardContent>
-            <CardFooter>
-              {applied.has(job.id) ? (
-                <div className="flex items-center gap-2 text-green-400 text-sm">
-                  <CheckCircle className="h-4 w-4" /> Application submitted
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((job) => (
+            <Card key={job.id} className="flex flex-col">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base">{job.title}</CardTitle>
+                  {applied.has(job.id) && <Badge variant="success">Applied</Badge>}
                 </div>
-              ) : (
-                <Button className="w-full" onClick={() => { setApplyJobId(job.id); setFile(null); setFileError(null) }}>
-                  Apply Now
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                <CardDescription className="line-clamp-2">{job.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 space-y-1 text-sm text-muted-foreground">
+                <p>Degree: <span className="text-foreground">{job.requiredDegree}</span></p>
+                <p>Min height: <span className="text-foreground">{job.minHeightCm} cm</span></p>
+                <p>Closes: <span className="text-foreground">{job.closeDate}</span></p>
+                <p>Exam: <span className="text-foreground">{job.examDate}</span></p>
+              </CardContent>
+              <CardFooter>
+                {applied.has(job.id) ? (
+                  <div className="flex items-center gap-2 text-green-400 text-sm">
+                    <CheckCircle className="h-4 w-4" /> Application submitted
+                  </div>
+                ) : (
+                  <Button className="w-full" onClick={() => { setApplyJobId(job.id); setFile(null); setFileError(null) }}>
+                    Apply Now
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Apply modal */}
       <Dialog open={applyJobId !== null} onOpenChange={() => setApplyJobId(null)}>
