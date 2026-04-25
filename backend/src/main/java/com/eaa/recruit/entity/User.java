@@ -40,6 +40,12 @@ public class User extends BaseEntity {
     @Column(name = "degree", length = 100)
     private String degree;
 
+    @Column(name = "field_of_study", length = 150)
+    private String fieldOfStudy;
+
+    @Column(name = "graduation_year")
+    private Integer graduationYear;
+
     protected User() {}
 
     private User(String email, String passwordHash, Role role, String fullName) {
@@ -59,12 +65,24 @@ public class User extends BaseEntity {
     public String getFullName()     { return fullName; }
     public boolean isActive()       { return active; }
 
-    public String  getPhone()    { return phone; }
-    public Integer getHeightCm() { return heightCm; }
-    public Integer getWeightKg() { return weightKg; }
-    public String  getDegree()   { return degree; }
+    public String  getPhone()          { return phone; }
+    public Integer getHeightCm()       { return heightCm; }
+    public Integer getWeightKg()       { return weightKg; }
+    public String  getDegree()         { return degree; }
+    public String  getFieldOfStudy()   { return fieldOfStudy; }
+    public Integer getGraduationYear() { return graduationYear; }
 
     public void activate()                     { this.active = true; }
     public void deactivate()                   { this.active = false; }
     public void changePassword(String newHash) { this.passwordHash = newHash; }
+
+    public void updateProfile(Integer heightCm, Integer weightKg, String degree,
+                               String fieldOfStudy, Integer graduationYear, String phone) {
+        this.heightCm       = heightCm;
+        this.weightKg       = weightKg;
+        this.degree         = degree;
+        this.fieldOfStudy   = fieldOfStudy;
+        this.graduationYear = graduationYear;
+        this.phone          = phone;
+    }
 }
