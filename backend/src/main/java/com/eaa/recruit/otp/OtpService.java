@@ -3,9 +3,11 @@ package com.eaa.recruit.otp;
 import com.eaa.recruit.cache.OtpCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -20,7 +22,12 @@ import java.util.Optional;
 @Service
 public class OtpService {
 
-    private static final Logger log = LoggerFactory.getLogger(OtpService.class);
+    private static final Logger   log = LoggerFactory.getLogger(OtpService.class);
+
+    private static final String   OTP_ATTEMPTS_PREFIX = "otp_attempts:";
+    private static final String   OTP_BLOCKED_PREFIX  = "otp_blocked:";
+    private static final int      MAX_OTP_ATTEMPTS    = 5;
+    private static final Duration BLOCK_DURATION      = Duration.ofMinutes(15);
 
     private final OtpCacheService otpCacheService;
     private final OtpNotificationPort notificationPort;
@@ -72,6 +79,12 @@ public class OtpService {
      * - ServiceUnavailable — Redis unavailable
      */
     public OtpVerificationResult verify(String recipient, String submittedOtp) {
+        // Brute-force protection: reject immediately if this email is locked out
+        if (isOtpBlocked(recipient)) {
+            log.warn("OTP verify blocked for recipient='{}' — too many failed attempts", recipient);
+            return new OtpVerificationResult.Blocked();
+        }
+
         // Peek at TTL to differentiate expired vs never-sent / already-consumed
         Optional<Long> ttl = otpCacheService.getRemainingTtl(recipient);
 
@@ -88,11 +101,48 @@ public class OtpService {
         boolean matched = otpCacheService.validateAndConsume(recipient, submittedOtp);
 
         if (matched) {
+            clearOtpAttempts(recipient);
             log.info("OTP verified successfully for recipient='{}'", recipient);
             return new OtpVerificationResult.Success();
         } else {
+            recordFailedAttempt(recipient);
             log.debug("OTP mismatch for recipient='{}'", recipient);
             return new OtpVerificationResult.Invalid();
+        }
+    }
+
+    private boolean isOtpBlocked(String recipient) {
+        try {
+            return Boolean.TRUE.equals(redis.hasKey(OTP_BLOCKED_PREFIX + recipient));
+        } catch (DataAccessException ex) {
+            log.warn("Redis unavailable — cannot check OTP block for '{}', failing open", recipient);
+            return false;
+        }
+    }
+
+    private void recordFailedAttempt(String recipient) {
+        try {
+            String key = OTP_ATTEMPTS_PREFIX + recipient;
+            Long count = redis.opsForValue().increment(key);
+            if (count != null && count == 1L) {
+                redis.expire(key, BLOCK_DURATION);
+            }
+            if (count != null && count >= MAX_OTP_ATTEMPTS) {
+                redis.opsForValue().set(OTP_BLOCKED_PREFIX + recipient, "1", BLOCK_DURATION);
+                redis.delete(key);
+                log.warn("OTP brute-force block applied for recipient='{}' after {} failures", recipient, count);
+            }
+        } catch (DataAccessException ex) {
+            log.warn("Redis unavailable — could not record OTP failure for '{}'", recipient);
+        }
+    }
+
+    private void clearOtpAttempts(String recipient) {
+        try {
+            redis.delete(OTP_ATTEMPTS_PREFIX + recipient);
+            redis.delete(OTP_BLOCKED_PREFIX + recipient);
+        } catch (DataAccessException ex) {
+            log.warn("Redis unavailable — could not clear OTP attempts for '{}'", recipient);
         }
     }
 
