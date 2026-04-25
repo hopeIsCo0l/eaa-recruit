@@ -87,6 +87,16 @@ All ML workloads. Runs as a FastAPI service; never blocks the main API path.
 - **PDF generation** — ReportLab report with charts and explanations
 - Vector embeddings cached in Redis (1 h) and persisted in ChromaDB
 
+### Observability
+
+All three backend services emit **structured JSON logs** to stdout and propagate a `X-Correlation-ID` header across service boundaries:
+
+- **Spring Boot** — `logstash-logback-encoder`, `CorrelationIdFilter` writes to MDC
+- **Go Exam Engine** — `log/slog` JSON handler, `CorrelationID` Gin middleware
+- **Python AI Service** — `python-json-logger`, FastAPI ASGI middleware
+
+---
+
 ### React Frontend (`/frontend`)
 
 Four role-specific portals behind a single protected shell.
@@ -105,9 +115,9 @@ Four role-specific portals behind a single protected shell.
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS v4, Shadcn/UI, Zustand, react-hook-form + Zod, Axios |
-| Backend | Spring Boot 3, Java 21, Gradle, Spring Security (JWT), Spring Cloud Stream (Kafka), Hibernate/JPA, Flyway |
-| Exam Engine | Go 1.21, Gin, go-redis v9, IBM/sarama (Kafka) |
-| AI Service | Python 3.11, FastAPI, sentence-transformers (SBERT), SHAP, LIME, spaCy, PyMuPDF, ReportLab, chromadb |
+| Backend | Spring Boot 3.2, Java 23, Gradle 8.13, Spring Security (JWT), Spring Cloud Stream (Kafka), Hibernate/JPA, Flyway |
+| Exam Engine | Go 1.23, Gin, go-redis v9, IBM/sarama (Kafka) |
+| AI Service | Python 3.11+, FastAPI, sentence-transformers (SBERT), SHAP, LIME, spaCy, PyMuPDF, ReportLab |
 | Data | PostgreSQL 16, Redis 7 |
 | Messaging | Apache Kafka |
 
@@ -244,11 +254,13 @@ npm run dev
 # Spring Boot
 cd backend && ./gradlew test
 
-# Go
+# Go (unit tests; add -race in Linux CI for data-race detection)
 cd exam-engine && go test ./...
 
 # Python
-cd ai-service && pytest
+cd ai-service
+pip install -r requirements-test.txt
+pytest tests/
 ```
 
 ---
