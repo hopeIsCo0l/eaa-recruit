@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
@@ -7,14 +7,17 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/RichTextEditor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { jobsApi } from '@/api/jobs'
 
 const schema = z
   .object({
     title: z.string().min(3, 'Title must be at least 3 characters'),
-    description: z.string().min(10, 'Description too short'),
+    description: z.string().min(1, 'Description is required').refine(
+      (v) => v.replace(/<[^>]*>/g, '').trim().length >= 10,
+      'Description must be at least 10 characters'
+    ),
     minHeightCm: z.coerce.number().int().min(100).max(250),
     minWeightKg: z.coerce.number().int().min(30).max(200),
     requiredDegree: z.string().min(2),
@@ -39,9 +42,10 @@ export function JobCreatorPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { description: '' } })
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)
@@ -68,8 +72,18 @@ export function JobCreatorPage() {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" rows={4} {...register('description')} />
+              <Label>Description</Label>
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <RichTextEditor
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Describe the role, responsibilities, and requirements…"
+                  />
+                )}
+              />
               {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
             </div>
 
