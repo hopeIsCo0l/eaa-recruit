@@ -84,6 +84,18 @@ export function ResultsPage() {
     setPdfPage(1)
   }
 
+  useEffect(() => {
+    if (!pdfOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown')
+        setPdfPage((p) => Math.min(pdfPages, p + 1))
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')
+        setPdfPage((p) => Math.max(1, p - 1))
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [pdfOpen, pdfPages])
+
   if (loading) {
     return (
       <div className="flex justify-center py-16">
