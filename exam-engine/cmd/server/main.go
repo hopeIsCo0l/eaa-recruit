@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,6 +19,8 @@ import (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+
 	cfg := config.Load()
 
 	// ── Infrastructure ──────────────────────────────────────────────────────────
@@ -61,7 +63,7 @@ func main() {
 
 	// ── Router ───────────────────────────────────────────────────────────────────
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(middleware.CorrelationID(), gin.Recovery())
 
 	// Unauthenticated
 	router.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "pong"}) })
@@ -83,28 +85,29 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("exam engine listening on :%s", cfg.Port)
+		slog.Info("exam engine listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("shutting down exam engine...")
+	slog.Info("shutting down exam engine")
 
 	cancel() // stop Kafka consumer, countdown, heartbeat monitor
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("HTTP server shutdown error: %v", err)
+		slog.Error("HTTP server shutdown error", "error", err)
 	}
 
 	pool.Stop() // drain pending grading tasks before exit (FR-43)
 	_ = rawProducer.Close()
 	_ = consumerGroup.Close()
 	_ = rdb.Close()
-	log.Println("exam engine stopped")
+	slog.Info("exam engine stopped")
 }

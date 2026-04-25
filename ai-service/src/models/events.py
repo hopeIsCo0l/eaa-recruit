@@ -13,3 +13,4 @@ class ExamSubmittedEvent(BaseModel):
     candidateId: str
     jobId: str
     answers: dict  # questionId -> answer text
+

@@ -16,3 +16,4 @@ scikit-learn==1.5.2
 reportlab==4.2.2
 matplotlib==3.9.2
 psutil==6.0.0
+python-json-logger==2.0.7
