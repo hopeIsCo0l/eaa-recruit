@@ -17,4 +17,7 @@ export const availabilityApi = {
 
   getAvailableSlots: () =>
     apiClient.get<{ data: AvailabilitySlot[] }>('/availability/available'),
+
+  deleteSlot: (id: number) =>
+    apiClient.delete(`/recruiters/availability/${id}`),
 }
