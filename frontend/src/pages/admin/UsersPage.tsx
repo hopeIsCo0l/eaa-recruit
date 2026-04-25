@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, PlusCircle, UserCheck, UserX } from 'lucide-react'
+import { Loader2, PlusCircle, Search, UserCheck, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { adminApi, type User } from '@/api/admin'
+import { showToast } from '@/hooks/useToast'
 
 const schema = z.object({
   fullName: z.string().min(2),
@@ -21,6 +22,7 @@ type FormValues = z.infer<typeof schema>
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [toggling, setToggling] = useState<number | null>(null)
 
@@ -30,35 +32,65 @@ export function UsersPage() {
 
   const reload = () => {
     setLoading(true)
-    adminApi.listUsers().then((r) => setUsers(r.data.data)).catch(() => {}).finally(() => setLoading(false))
+    adminApi
+      .listUsers()
+      .then((r) => setUsers(r.data.data))
+      .catch(() => showToast({ title: 'Failed to load users', variant: 'error' }))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => { reload() }, [])
 
   const onCreateRecruiter = async (values: FormValues) => {
-    await adminApi.createRecruiter(values)
-    reset()
-    setCreateOpen(false)
-    reload()
+    try {
+      await adminApi.createRecruiter(values)
+      reset()
+      setCreateOpen(false)
+      showToast({ title: 'Recruiter created', variant: 'success' })
+      reload()
+    } catch {
+      showToast({ title: 'Failed to create recruiter', variant: 'error' })
+    }
   }
 
   const toggleStatus = async (user: User) => {
     setToggling(user.id)
     try {
       await adminApi.setUserStatus(user.id, !user.active)
+      showToast({ title: user.active ? 'User deactivated' : 'User activated', variant: 'success' })
       reload()
+    } catch {
+      showToast({ title: 'Failed to update status', variant: 'error' })
     } finally {
       setToggling(null)
     }
   }
 
+  const filtered = users.filter(
+    (u) =>
+      !search ||
+      u.fullName.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
+  )
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold">User Management</h1>
-        <Button onClick={() => setCreateOpen(true)}>
-          <PlusCircle className="h-4 w-4 mr-2" /> Create Recruiter
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search name or email…"
+              className="pl-9 w-64"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => setCreateOpen(true)}>
+            <PlusCircle className="h-4 w-4 mr-2" /> Create Recruiter
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -67,6 +99,10 @@ export function UsersPage() {
             <div className="flex justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-muted-foreground text-center py-16">
+              {search ? 'No users match your search.' : 'No users found.'}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -81,7 +117,7 @@ export function UsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
+                  {filtered.map((u) => (
                     <tr key={u.id} className="border-b border-border hover:bg-secondary/40 transition-colors">
                       <td className="p-3 font-medium">{u.fullName}</td>
                       <td className="p-3 text-muted-foreground">{u.email}</td>

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { profileApi } from '@/api/profile'
+import { showToast } from '@/hooks/useToast'
 
 const schema = z.object({
   heightCm:       z.coerce.number().min(100).max(250),
@@ -27,12 +28,21 @@ export function ProfilePage() {
   })
 
   useEffect(() => {
-    profileApi.get().then((r) => reset(r.data.data as FormData)).catch(() => {})
+    profileApi.get()
+      .then((r) => reset(r.data.data as FormData))
+      .catch(() => {
+        showToast({ title: 'Could not load profile', description: 'Fill in your details below.', variant: 'warning' })
+      })
   }, [reset])
 
   const onSubmit = async (data: FormData) => {
-    await profileApi.update(data)
-    navigate('/jobs')
+    try {
+      await profileApi.update(data)
+      showToast({ title: 'Profile saved', variant: 'success' })
+      navigate('/jobs')
+    } catch {
+      showToast({ title: 'Save failed', description: 'Please try again.', variant: 'error' })
+    }
   }
 
   const fields: { name: keyof FormData; label: string; type?: string }[] = [

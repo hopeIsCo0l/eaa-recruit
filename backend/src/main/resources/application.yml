@@ -97,6 +97,8 @@ management:
 jwt:
   secret: ${JWT_SECRET:change-me-in-production-min-256-bits-long-secret-key}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  private-key-pem: ${JWT_PRIVATE_KEY_PEM:}
+  public-key-pem: ${JWT_PUBLIC_KEY_PEM:}
 
 otp:
   ttl-seconds: ${OTP_TTL_SECONDS:300}
