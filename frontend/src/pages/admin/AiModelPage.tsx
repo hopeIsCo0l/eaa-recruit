@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Switch } from '@/components/ui/switch'
 import { adminApi, type AiModel } from '@/api/admin'
+import { showToast } from '@/hooks/useToast'
 
 const schema = z.object({
   modelVersion: z.string().min(1, 'Version required'),
@@ -23,7 +23,8 @@ export function AiModelPage() {
   const [models, setModels] = useState<AiModel[]>([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
-  const [activating, setActivating] = useState<number | null>(null)
+  const [activateTarget, setActivateTarget] = useState<AiModel | null>(null)
+  const [activating, setActivating] = useState(false)
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -31,25 +32,39 @@ export function AiModelPage() {
 
   const reload = () => {
     setLoading(true)
-    adminApi.listAiModels().then((r) => setModels(r.data.data)).catch(() => {}).finally(() => setLoading(false))
+    adminApi
+      .listAiModels()
+      .then((r) => setModels(r.data.data))
+      .catch(() => showToast({ title: 'Failed to load AI models', variant: 'error' }))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => { reload() }, [])
 
   const onRegister = async (values: FormValues) => {
-    await adminApi.registerAiModel(values.modelVersion, values.description ?? '')
-    reset()
-    setCreateOpen(false)
-    reload()
+    try {
+      await adminApi.registerAiModel(values.modelVersion, values.description ?? '')
+      reset()
+      setCreateOpen(false)
+      showToast({ title: 'Model version registered', variant: 'success' })
+      reload()
+    } catch {
+      showToast({ title: 'Failed to register model', variant: 'error' })
+    }
   }
 
-  const activate = async (id: number) => {
-    setActivating(id)
+  const confirmActivate = async () => {
+    if (!activateTarget) return
+    setActivating(true)
     try {
-      await adminApi.activateAiModel(id)
+      await adminApi.activateAiModel(activateTarget.id)
+      showToast({ title: `${activateTarget.modelVersion} is now active`, variant: 'success' })
       reload()
+    } catch {
+      showToast({ title: 'Failed to activate model', variant: 'error' })
     } finally {
-      setActivating(null)
+      setActivating(false)
+      setActivateTarget(null)
     }
   }
 
@@ -108,14 +123,9 @@ export function AiModelPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => activate(m.id)}
-                            disabled={activating === m.id}
+                            onClick={() => setActivateTarget(m)}
                           >
-                            {activating === m.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              'Activate'
-                            )}
+                            Activate
                           </Button>
                         )}
                       </td>
@@ -128,6 +138,30 @@ export function AiModelPage() {
         </CardContent>
       </Card>
 
+      {/* Activation confirmation */}
+      <Dialog open={activateTarget !== null} onOpenChange={(o) => { if (!o) setActivateTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Activate model version?</DialogTitle>
+          </DialogHeader>
+          {activateTarget && (
+            <p className="text-sm text-muted-foreground">
+              Switch the active model to{' '}
+              <span className="font-mono font-medium text-foreground">{activateTarget.modelVersion}</span>?
+              This will immediately affect all AI screening requests.
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivateTarget(null)}>Cancel</Button>
+            <Button onClick={confirmActivate} disabled={activating}>
+              {activating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Activate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Register new version */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>

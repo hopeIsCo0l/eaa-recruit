@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { availabilityApi, type AvailabilitySlot } from '@/api/availability'
+import { showToast } from '@/hooks/useToast'
 
 interface NewSlot {
   slotDate: string
@@ -17,15 +19,23 @@ const EMPTY: NewSlot = { slotDate: '', startTime: '', endTime: '' }
 
 export function AvailabilityCalendarPage() {
   const [slots, setSlots] = useState<AvailabilitySlot[]>([])
+  const [loading, setLoading] = useState(true)
   const [drafts, setDrafts] = useState<NewSlot[]>([{ ...EMPTY }])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AvailabilitySlot | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const reload = () =>
-    availabilityApi.getMySlots().then((r) => setSlots(r.data.data)).catch(() => {})
+    availabilityApi
+      .getMySlots()
+      .then((r) => setSlots(r.data.data))
+      .catch(() => showToast({ title: 'Failed to load slots', variant: 'error' }))
 
-  useEffect(() => { reload() }, [])
+  useEffect(() => {
+    reload().finally(() => setLoading(false))
+  }, [])
 
   const byDate = slots.reduce<Record<string, AvailabilitySlot[]>>((acc, s) => {
     ;(acc[s.slotDate] ??= []).push(s)
@@ -52,6 +62,7 @@ export function AvailabilityCalendarPage() {
       setDrafts([{ ...EMPTY }])
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
+      showToast({ title: 'Slots saved', variant: 'success' })
       reload()
     } catch {
       setError('Failed to save slots — please try again.')
@@ -60,12 +71,30 @@ export function AvailabilityCalendarPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await availabilityApi.deleteSlot(deleteTarget.id)
+      setSlots((prev) => prev.filter((s) => s.id !== deleteTarget.id))
+      showToast({ title: 'Slot removed', variant: 'success' })
+    } catch {
+      showToast({ title: 'Failed to remove slot', variant: 'error' })
+    } finally {
+      setDeleting(false)
+      setDeleteTarget(null)
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold">Interview Availability</h1>
 
-      {/* Existing slots */}
-      {Object.keys(byDate).length > 0 && (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : Object.keys(byDate).length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Current Schedule</CardTitle>
@@ -78,19 +107,29 @@ export function AvailabilityCalendarPage() {
                   <p className="text-sm font-medium text-muted-foreground mb-2">{date}</p>
                   <div className="flex flex-wrap gap-2">
                     {daySlots.map((s) => (
-                      <Badge key={s.id} variant={s.booked ? 'secondary' : 'outline'}>
-                        {s.startTime} – {s.endTime}
-                        {s.booked && ' (booked)'}
-                      </Badge>
+                      <div key={s.id} className="flex items-center gap-1">
+                        <Badge variant={s.booked ? 'secondary' : 'outline'}>
+                          {s.startTime} – {s.endTime}
+                          {s.booked && ' (booked)'}
+                        </Badge>
+                        {!s.booked && (
+                          <button
+                            onClick={() => setDeleteTarget(s)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            title="Remove slot"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
               ))}
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
-      {/* Add new slots */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Add Availability Slots</CardTitle>
@@ -151,6 +190,30 @@ export function AvailabilityCalendarPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(o) => { if (!o) setDeleteTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove slot?</DialogTitle>
+          </DialogHeader>
+          {deleteTarget && (
+            <p className="text-sm text-muted-foreground">
+              Remove{' '}
+              <span className="text-foreground font-medium">
+                {deleteTarget.slotDate} {deleteTarget.startTime}–{deleteTarget.endTime}
+              </span>
+              ? This cannot be undone.
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { applicationsApi, type FeedbackReport } from '@/api/applications'
+import { showToast } from '@/hooks/useToast'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -23,21 +24,27 @@ const DECISION_CONFIG = {
 
 export function ResultsPage() {
   const [reports, setReports] = useState<FeedbackReport[]>([])
+  const [loading, setLoading] = useState(true)
   const [pdfBlob, setPdfBlob] = useState<string | null>(null)
   const [pdfOpen, setPdfOpen] = useState(false)
   const [pdfPages, setPdfPages] = useState<number>(1)
+  const [pdfPage, setPdfPage] = useState<number>(1)
   const [loadingPdf, setLoadingPdf] = useState(false)
 
   useEffect(() => {
-    applicationsApi.list().then(async (r) => {
-      const finals = r.data.data.filter((a) =>
-        ['SELECTED', 'REJECTED', 'WAITLISTED'].includes(a.status)
-      )
-      const feedbacks = await Promise.allSettled(
-        finals.map((a) => applicationsApi.getFeedback(a.id).then((fr) => fr.data.data))
-      )
-      setReports(feedbacks.flatMap((f) => (f.status === 'fulfilled' ? [f.value] : [])))
-    }).catch(() => {})
+    applicationsApi
+      .list()
+      .then(async (r) => {
+        const finals = r.data.data.filter((a) =>
+          ['SELECTED', 'REJECTED', 'WAITLISTED'].includes(a.status)
+        )
+        const feedbacks = await Promise.allSettled(
+          finals.map((a) => applicationsApi.getFeedback(a.id).then((fr) => fr.data.data))
+        )
+        setReports(feedbacks.flatMap((f) => (f.status === 'fulfilled' ? [f.value] : [])))
+      })
+      .catch(() => showToast({ title: 'Failed to load results', variant: 'error' }))
+      .finally(() => setLoading(false))
   }, [])
 
   const handlePreview = async (appId: number) => {
@@ -46,19 +53,55 @@ export function ResultsPage() {
       const res = await applicationsApi.getXaiReport(appId)
       const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/pdf' }))
       setPdfBlob(url)
+      setPdfPage(1)
       setPdfOpen(true)
-    } catch { /* show loading message */ }
-    finally { setLoadingPdf(false) }
+    } catch {
+      showToast({ title: 'Failed to load report', variant: 'error' })
+    } finally {
+      setLoadingPdf(false)
+    }
   }
 
   const handleDownload = async (appId: number) => {
-    const res = await applicationsApi.getXaiReport(appId)
-    const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/pdf' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `xai-report-${appId}.pdf`
-    a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const res = await applicationsApi.getXaiReport(appId)
+      const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `xai-report-${appId}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      showToast({ title: 'Download failed', variant: 'error' })
+    }
+  }
+
+  const closePdf = () => {
+    setPdfOpen(false)
+    if (pdfBlob) URL.revokeObjectURL(pdfBlob)
+    setPdfBlob(null)
+    setPdfPages(1)
+    setPdfPage(1)
+  }
+
+  useEffect(() => {
+    if (!pdfOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown')
+        setPdfPage((p) => Math.min(pdfPages, p + 1))
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')
+        setPdfPage((p) => Math.max(1, p - 1))
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [pdfOpen, pdfPages])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   if (reports.length === 0) {
@@ -88,7 +131,6 @@ export function ResultsPage() {
               {cfg && <p className="text-sm text-muted-foreground mt-2">{cfg.label}</p>}
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Score bars */}
               {[
                 { label: 'CV Relevance', value: r.cvRelevanceScore != null ? r.cvRelevanceScore * 100 : null },
                 { label: 'Exam Score',   value: r.examScore },
@@ -121,7 +163,7 @@ export function ResultsPage() {
                 </div>
               )}
 
-              {r.xaiReportUrl && (
+              {r.xaiReportUrl ? (
                 <div className="flex gap-2 pt-2">
                   <Button
                     variant="outline"
@@ -136,8 +178,7 @@ export function ResultsPage() {
                     <Download className="h-4 w-4 mr-2" /> Download
                   </Button>
                 </div>
-              )}
-              {!r.xaiReportUrl && (
+              ) : (
                 <p className="text-xs text-muted-foreground">AI report is being generated — check back shortly.</p>
               )}
             </CardContent>
@@ -145,21 +186,19 @@ export function ResultsPage() {
         )
       })}
 
-      {/* In-browser PDF viewer */}
-      <Dialog open={pdfOpen} onOpenChange={(o) => { setPdfOpen(o); if (!o && pdfBlob) URL.revokeObjectURL(pdfBlob) }}>
+      <Dialog open={pdfOpen} onOpenChange={(o) => { if (!o) closePdf() }}>
         <DialogContent className="max-w-3xl w-full h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>AI Feedback Report</DialogTitle>
           </DialogHeader>
+
           <div className="flex-1 overflow-y-auto flex justify-center">
             {pdfBlob ? (
               <Document
                 file={pdfBlob}
                 onLoadSuccess={({ numPages }) => setPdfPages(numPages)}
               >
-                {Array.from({ length: pdfPages }, (_, i) => (
-                  <Page key={i + 1} pageNumber={i + 1} width={600} className="mb-4" />
-                ))}
+                <Page pageNumber={pdfPage} width={600} />
               </Document>
             ) : (
               <div className="flex items-center justify-center flex-1">
@@ -167,6 +206,30 @@ export function ResultsPage() {
               </div>
             )}
           </div>
+
+          {pdfPages > 1 && (
+            <div className="flex items-center justify-center gap-4 pt-3 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPdfPage((p) => Math.max(1, p - 1))}
+                disabled={pdfPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {pdfPage} of {pdfPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPdfPage((p) => Math.min(pdfPages, p + 1))}
+                disabled={pdfPage === pdfPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
