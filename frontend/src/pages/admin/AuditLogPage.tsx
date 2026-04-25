@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { adminApi, type AuditLog } from '@/api/admin'
+import { showToast } from '@/hooks/useToast'
 
 export function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -12,6 +13,7 @@ export function AuditLogPage() {
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
   const [entityFilter, setEntityFilter] = useState('')
+  const [emailFilter, setEmailFilter] = useState('')
   const PAGE_SIZE = 20
 
   const load = (p: number, reset = false) => {
@@ -23,7 +25,7 @@ export function AuditLogPage() {
         setLogs((prev) => (reset ? data : [...prev, ...data]))
         setHasMore(data.length === PAGE_SIZE)
       })
-      .catch(() => {})
+      .catch(() => showToast({ title: 'Failed to load audit logs', variant: 'error' }))
       .finally(() => setLoading(false))
   }
 
@@ -35,9 +37,11 @@ export function AuditLogPage() {
     load(next)
   }
 
-  const filtered = entityFilter
-    ? logs.filter((l) => l.entityType.toLowerCase().includes(entityFilter.toLowerCase()))
-    : logs
+  const filtered = logs.filter((l) => {
+    const matchEntity = !entityFilter || l.entityType.toLowerCase().includes(entityFilter.toLowerCase())
+    const matchEmail = !emailFilter || (l.changedByEmail ?? '').toLowerCase().includes(emailFilter.toLowerCase())
+    return matchEntity && matchEmail
+  })
 
   const formatDate = (s: string) =>
     new Date(s).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
@@ -46,12 +50,20 @@ export function AuditLogPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold">Audit Log</h1>
-        <Input
-          placeholder="Filter by entity type…"
-          className="w-64"
-          value={entityFilter}
-          onChange={(e) => setEntityFilter(e.target.value)}
-        />
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            placeholder="Filter by entity type…"
+            className="w-52"
+            value={entityFilter}
+            onChange={(e) => setEntityFilter(e.target.value)}
+          />
+          <Input
+            placeholder="Filter by user email…"
+            className="w-52"
+            value={emailFilter}
+            onChange={(e) => setEmailFilter(e.target.value)}
+          />
+        </div>
       </div>
 
       <Card>
