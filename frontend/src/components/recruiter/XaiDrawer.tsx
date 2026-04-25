@@ -138,8 +138,8 @@ export function XaiDrawer({ appId, candidateName, onClose }: Props) {
                   >
                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={82} />
-                    <Tooltip formatter={(v: number) => [`${v.toFixed(1)}`, 'Score']} />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, formatter: (v: number) => `${v.toFixed(1)}` }}>
+                    <Tooltip formatter={(v) => [typeof v === 'number' ? v.toFixed(1) : '', 'Score']} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, formatter: (v: unknown) => typeof v === 'number' ? v.toFixed(1) : '' }}>
                       {scoreData.map((_, i) => (
                         <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
                       ))}

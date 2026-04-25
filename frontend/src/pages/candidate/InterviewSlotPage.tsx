@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { availabilityApi, type AvailabilitySlot } from '@/api/availability'
 import { applicationsApi } from '@/api/applications'

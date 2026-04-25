@@ -45,7 +45,7 @@ export function JobCreatorPage() {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { description: '' } })
+  } = useForm<z.input<typeof schema>, unknown, FormValues>({ resolver: zodResolver(schema), defaultValues: { description: '' } })
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)

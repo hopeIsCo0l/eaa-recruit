@@ -9,7 +9,7 @@ export interface Toast {
   variant?: ToastVariant
 }
 
-let toastQueue: ((toast: Toast) => void) | null = null
+let toastQueue: ((toast: Omit<Toast, 'id'>) => void) | null = null
 
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([])

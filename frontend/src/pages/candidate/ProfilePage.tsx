@@ -23,7 +23,7 @@ type FormData = z.infer<typeof schema>
 export function ProfilePage() {
   const navigate = useNavigate()
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<z.input<typeof schema>, unknown, FormData>({
     resolver: zodResolver(schema),
   })
 
