@@ -22,6 +22,7 @@ type Config struct {
 	AIGradingTimeout  time.Duration
 	AIGradingRetries  int
 	AIGradingProtocol string // "rest" or "grpc"
+	JwtPublicKeyPEM   string // PEM-encoded RSA public key from Spring Boot (JWT_PUBLIC_KEY_PEM)
 }
 
 func Load() *Config {
@@ -41,6 +42,7 @@ func Load() *Config {
 		AIGradingTimeout:  getEnvDuration("AI_GRADING_TIMEOUT", 10*time.Second),
 		AIGradingRetries:  getEnvInt("AI_GRADING_RETRIES", 3),
 		AIGradingProtocol: getEnv("AI_GRADING_PROTOCOL", "rest"),
+		JwtPublicKeyPEM:   getEnv("JWT_PUBLIC_KEY_PEM", ""),
 	}
 }
 

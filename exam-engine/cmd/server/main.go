@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +23,9 @@ import (
 
 func main() {
 	cfg := config.Load()
+
+	// ── JWT RSA public key ────────────────────────────────────────────────────────
+	jwtPublicKey := mustParseRSAPublicKey(cfg.JwtPublicKeyPEM)
 
 	// ── Infrastructure ──────────────────────────────────────────────────────────
 	rdb := pkgredis.NewClient(cfg)
@@ -68,7 +74,7 @@ func main() {
 	router.GET("/health", healthHandler.Health) // FR-60 — no auth
 
 	// Exam routes — JWT required
-	exam := router.Group("/exam", middleware.JWTAuth())
+	exam := router.Group("/exam", middleware.JWTAuth(jwtPublicKey))
 	{
 		exam.GET("/start", middleware.RateLimiter(rdb, cfg), examHandler.StartExam)             // FR-51
 		exam.POST("/submit-answer", middleware.RateLimiter(rdb, cfg), examHandler.SubmitAnswer) // FR-52
@@ -107,4 +113,25 @@ func main() {
 	_ = consumerGroup.Close()
 	_ = rdb.Close()
 	log.Println("exam engine stopped")
+}
+
+// mustParseRSAPublicKey parses a PEM-encoded RSA public key from JWT_PUBLIC_KEY_PEM.
+// Exits with a fatal log if the key is missing or malformed.
+func mustParseRSAPublicKey(pemStr string) *rsa.PublicKey {
+	if pemStr == "" {
+		log.Fatal("JWT_PUBLIC_KEY_PEM is required — set it to the RSA public key from Spring Boot's /api/v1/auth/.well-known/jwks.json")
+	}
+	block, _ := pem.Decode([]byte(pemStr))
+	if block == nil {
+		log.Fatal("JWT_PUBLIC_KEY_PEM: failed to decode PEM block")
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		log.Fatalf("JWT_PUBLIC_KEY_PEM: failed to parse public key: %v", err)
+	}
+	rsaKey, ok := key.(*rsa.PublicKey)
+	if !ok {
+		log.Fatal("JWT_PUBLIC_KEY_PEM: key is not RSA")
+	}
+	return rsaKey
 }
