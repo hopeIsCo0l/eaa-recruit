@@ -4,7 +4,10 @@ WORKDIR /workspace
 
 COPY gradle/ gradle/
 COPY gradlew gradle.properties settings.gradle build.gradle ./
-RUN chmod +x gradlew && ./gradlew --version --no-daemon
+# Strip Windows-local JAVA_HOME path — eclipse-temurin image sets it correctly
+RUN chmod +x gradlew \
+ && sed -i '/org\.gradle\.java\.home/d' gradle.properties \
+ && ./gradlew --version --no-daemon
 
 COPY src/ src/
 RUN ./gradlew bootJar --no-daemon -x test
