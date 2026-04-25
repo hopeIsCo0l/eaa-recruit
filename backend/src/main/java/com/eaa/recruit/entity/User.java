@@ -72,6 +72,8 @@ public class User extends BaseEntity {
     public String  getFieldOfStudy()   { return fieldOfStudy; }
     public Integer getGraduationYear() { return graduationYear; }
 
+    public void setPhone(String phone)         { this.phone = phone; }
+
     public void activate()                     { this.active = true; }
     public void deactivate()                   { this.active = false; }
     public void changePassword(String newHash) { this.passwordHash = newHash; }
