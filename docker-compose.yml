@@ -30,7 +30,7 @@ services:
       retries: 10
 
   kafka:
-    image: bitnami/kafka:3.7
+    image: bitnami/kafka:3.9
     container_name: eaa-kafka
     environment:
       KAFKA_CFG_NODE_ID: "0"
