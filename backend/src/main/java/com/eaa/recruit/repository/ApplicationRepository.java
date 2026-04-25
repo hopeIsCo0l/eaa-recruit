@@ -15,6 +15,8 @@ import java.util.Optional;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
+    List<Application> findAllByCandidateId(Long candidateId);
+
     boolean existsByCandidateIdAndJobId(Long candidateId, Long jobId);
 
     Optional<Application> findByCandidateIdAndJobId(Long candidateId, Long jobId);
