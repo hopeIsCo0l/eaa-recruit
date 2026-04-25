@@ -1,6 +1,7 @@
 package com.eaa.recruit.service;
 
 import com.eaa.recruit.dto.application.AiScoreCallbackRequest;
+import com.eaa.recruit.dto.application.ApplicationResponse;
 import com.eaa.recruit.dto.application.SubmitApplicationResponse;
 import com.eaa.recruit.dto.internal.ExamScoreCallbackRequest;
 import com.eaa.recruit.entity.Application;
@@ -22,6 +23,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @Service
 public class ApplicationService {
@@ -135,5 +138,31 @@ public class ApplicationService {
 
         log.info("Exam score applied applicationId={} examScore={} finalScore={} completedAt={}",
                 applicationId, request.examScore(), finalScore, request.completedAt());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApplicationResponse> getMyApplications(Long candidateId) {
+        return applicationRepository.findAllByCandidateId(candidateId)
+                .stream()
+                .map(ApplicationResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApplicationResponse> getApplicationsByJob(Long jobId) {
+        return applicationRepository.findByJobId(jobId)
+                .stream()
+                .map(ApplicationResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ApplicationResponse getApplication(Long applicationId, Long requesterId, String role) {
+        Application app = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Application", applicationId));
+        if ("CANDIDATE".equals(role) && !app.getCandidate().getId().equals(requesterId)) {
+            throw new com.eaa.recruit.exception.UnauthorizedException("Access denied");
+        }
+        return ApplicationResponse.from(app);
     }
 }
