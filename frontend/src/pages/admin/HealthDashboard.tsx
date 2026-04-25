@@ -7,6 +7,9 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts'
 import { adminApi, type SystemHealth } from '@/api/admin'
+import { showToast } from '@/hooks/useToast'
+
+type JobRow = { jobTitle: string; total: number; selected: number }
 
 function StatusBadge({ up }: { up: boolean }) {
   return up ? (
@@ -20,10 +23,23 @@ function StatusBadge({ up }: { up: boolean }) {
   )
 }
 
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm text-muted-foreground">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-2xl font-bold tabular-nums">{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function HealthDashboard() {
   const [health, setHealth] = useState<SystemHealth | null>(null)
   const [loading, setLoading] = useState(true)
-  const [analyticsData, setAnalyticsData] = useState<{ jobTitle: string; total: number; selected: number }[]>([])
+  const [analyticsData, setAnalyticsData] = useState<JobRow[]>([])
 
   const reload = () => {
     setLoading(true)
@@ -41,7 +57,7 @@ export function HealthDashboard() {
           }))
         )
       })
-      .catch(() => {})
+      .catch(() => showToast({ title: 'Failed to load health data', variant: 'error' }))
       .finally(() => setLoading(false))
   }
 
@@ -56,6 +72,10 @@ export function HealthDashboard() {
     const m = Math.floor((s % 3600) / 60)
     return `${h}h ${m}m`
   }
+
+  const totalApps = analyticsData.reduce((sum, j) => sum + j.total, 0)
+  const totalSelected = analyticsData.reduce((sum, j) => sum + j.selected, 0)
+  const selectionRate = totalApps > 0 ? ((totalSelected / totalApps) * 100).toFixed(1) : '—'
 
   return (
     <div className="space-y-6">
@@ -72,6 +92,7 @@ export function HealthDashboard() {
         </div>
       ) : health ? (
         <>
+          {/* Service status */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
@@ -106,11 +127,13 @@ export function HealthDashboard() {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Uptime: {fmtUptime(health.uptimeSeconds)}</CardTitle>
-            </CardHeader>
-          </Card>
+          {/* Uptime + pipeline summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <StatCard label="Uptime" value={fmtUptime(health.uptimeSeconds)} />
+            <StatCard label="Total Applications" value={totalApps} />
+            <StatCard label="Selected" value={totalSelected} />
+            <StatCard label="Selection Rate" value={totalApps > 0 ? `${selectionRate}%` : '—'} />
+          </div>
 
           {analyticsData.length > 0 && (
             <Card>
