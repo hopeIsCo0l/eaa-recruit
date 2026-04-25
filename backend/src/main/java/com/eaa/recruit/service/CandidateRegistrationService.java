@@ -46,6 +46,7 @@ public class CandidateRegistrationService {
 
         String passwordHash = passwordEncoder.encode(request.password());
         User user = User.create(request.email(), passwordHash, Role.CANDIDATE, request.fullName());
+        user.setPhone(request.phone());
         user = userRepository.save(user);
 
         log.info("Candidate account created id={} email='{}'", user.getId(), user.getEmail());
