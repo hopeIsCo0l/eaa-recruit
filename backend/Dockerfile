@@ -1,13 +1,14 @@
 # ── Build stage ──────────────────────────────────────────────────────────────
-FROM eclipse-temurin:23-jdk-alpine AS build
+# Use the pre-packaged Gradle image — avoids the wrapper downloading gradle-8.13-bin.zip
+# which times out due to the wrapper's hardcoded 10s socket timeout.
+FROM gradle:8.13-jdk23-alpine AS build
 WORKDIR /workspace
 
-COPY gradle/ gradle/
-COPY gradlew gradle.properties settings.gradle build.gradle ./
-RUN chmod +x gradlew && ./gradlew --version --no-daemon
+COPY settings.gradle build.gradle ./
+RUN gradle dependencies --no-daemon -q
 
 COPY src/ src/
-RUN ./gradlew bootJar --no-daemon -x test
+RUN gradle bootJar --no-daemon -x test
 
 # ── Runtime stage ────────────────────────────────────────────────────────────
 FROM eclipse-temurin:23-jre-alpine AS runtime
