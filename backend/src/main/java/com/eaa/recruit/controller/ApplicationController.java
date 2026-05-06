@@ -1,6 +1,7 @@
 package com.eaa.recruit.controller;
 
 import com.eaa.recruit.dto.ApiResponse;
+import com.eaa.recruit.dto.application.ApplicationResponse;
 import com.eaa.recruit.dto.application.SubmitApplicationResponse;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsCandidate;
@@ -11,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/applications")
@@ -36,5 +39,13 @@ public class ApplicationController {
         SubmitApplicationResponse response = applicationService.submitApplication(jobId, cv, principal);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Application submitted successfully", response));
+    }
+
+    /** GET /api/v1/applications/me — list current candidate's applications. */
+    @GetMapping("/me")
+    @IsCandidate
+    public ResponseEntity<ApiResponse<List<ApplicationResponse>>> listMyApplications(
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        return ResponseEntity.ok(ApiResponse.success(applicationService.listMyApplications(principal.id())));
     }
 }

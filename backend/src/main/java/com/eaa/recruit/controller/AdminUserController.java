@@ -1,9 +1,11 @@
 package com.eaa.recruit.controller;
 
 import com.eaa.recruit.dto.ApiResponse;
+import com.eaa.recruit.dto.admin.AdminUserResponse;
 import com.eaa.recruit.dto.admin.CreateRecruiterRequest;
 import com.eaa.recruit.dto.admin.RecruiterCreatedResponse;
 import com.eaa.recruit.dto.admin.UserStatusRequest;
+import com.eaa.recruit.entity.Role;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsAdmin;
 import com.eaa.recruit.service.RecruiterAdminService;
@@ -13,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
@@ -57,5 +61,15 @@ public class AdminUserController {
                 ? "User activated successfully"
                 : "User deactivated successfully";
         return ResponseEntity.ok(ApiResponse.success(msg));
+    }
+
+    /**
+     * GET /api/v1/admin/users
+     * Lists all users, newest first. Optional ?role=ADMIN|RECRUITER|CANDIDATE filter.
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<AdminUserResponse>>> listUsers(
+            @RequestParam(value = "role", required = false) Role role) {
+        return ResponseEntity.ok(ApiResponse.success(recruiterAdminService.listUsers(role)));
     }
 }

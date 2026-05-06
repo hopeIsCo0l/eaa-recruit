@@ -1,10 +1,12 @@
 package com.eaa.recruit.service;
 
 import com.eaa.recruit.dto.application.AiScoreCallbackRequest;
+import com.eaa.recruit.dto.application.ApplicationResponse;
 import com.eaa.recruit.dto.application.SubmitApplicationResponse;
 import com.eaa.recruit.dto.internal.ExamScoreCallbackRequest;
 import com.eaa.recruit.entity.Application;
 import com.eaa.recruit.entity.ApplicationStatus;
+import com.eaa.recruit.entity.AvailabilitySlot;
 import com.eaa.recruit.entity.JobPosting;
 import com.eaa.recruit.entity.JobPostingStatus;
 import com.eaa.recruit.entity.User;
@@ -22,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @Service
 public class ApplicationService {
@@ -92,6 +96,33 @@ public class ApplicationService {
                 jobId,
                 application.getStatus(),
                 application.getSubmittedAt()
+        );
+    }
+
+    /** Candidate views their own applications, newest first. */
+    @Transactional(readOnly = true)
+    public List<ApplicationResponse> listMyApplications(Long candidateId) {
+        return applicationRepository.findByCandidateIdOrderBySubmittedAtDesc(candidateId)
+                .stream().map(ApplicationService::toResponse).toList();
+    }
+
+    private static ApplicationResponse toResponse(Application app) {
+        AvailabilitySlot slot = app.getInterviewSlot();
+        User candidate = app.getCandidate();
+        JobPosting job = app.getJob();
+        return new ApplicationResponse(
+                app.getId(),
+                job.getId(),
+                job.getTitle(),
+                candidate.getFullName(),
+                app.getStatus(),
+                app.getCvRelevanceScore(),
+                app.getExamScore(),
+                app.getHardFilterPassed(),
+                app.getFinalScore(),
+                app.getSubmittedAt(),
+                slot == null ? null : slot.getSlotDate(),
+                slot == null ? null : slot.getStartTime()
         );
     }
 

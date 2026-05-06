@@ -1,5 +1,6 @@
 package com.eaa.recruit.service;
 
+import com.eaa.recruit.dto.admin.AdminUserResponse;
 import com.eaa.recruit.dto.admin.CreateRecruiterRequest;
 import com.eaa.recruit.dto.admin.RecruiterCreatedResponse;
 import com.eaa.recruit.entity.Role;
@@ -12,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class RecruiterAdminService {
@@ -54,5 +57,24 @@ public class RecruiterAdminService {
         return new RecruiterCreatedResponse(
                 recruiter.getId(), recruiter.getEmail(),
                 recruiter.getFullName(), "Recruiter account created successfully");
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminUserResponse> listUsers(Role roleFilter) {
+        List<User> users = (roleFilter == null)
+                ? userRepository.findAllByOrderByCreatedAtDesc()
+                : userRepository.findByRoleOrderByCreatedAtDesc(roleFilter);
+        return users.stream().map(RecruiterAdminService::toResponse).toList();
+    }
+
+    private static AdminUserResponse toResponse(User u) {
+        return new AdminUserResponse(
+                u.getId(),
+                u.getEmail(),
+                u.getFullName(),
+                u.getRole().name(),
+                u.isActive(),
+                u.getCreatedAt()
+        );
     }
 }
