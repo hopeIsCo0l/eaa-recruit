@@ -2,7 +2,9 @@ package com.eaa.recruit.service;
 
 import com.eaa.recruit.dto.job.CreateJobRequest;
 import com.eaa.recruit.dto.job.CreateJobResponse;
+import com.eaa.recruit.dto.job.JobResponse;
 import com.eaa.recruit.entity.JobPosting;
+import com.eaa.recruit.entity.JobPostingStatus;
 import com.eaa.recruit.entity.User;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
@@ -13,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class JobService {
@@ -57,6 +61,40 @@ public class JobService {
                 job.getOpenDate(),
                 job.getCloseDate(),
                 job.getExamDate()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<JobResponse> listOpenJobs() {
+        return jobPostingRepository.findByStatus(JobPostingStatus.OPEN)
+                .stream().map(JobService::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<JobResponse> listJobsByRecruiter(Long recruiterId) {
+        return jobPostingRepository.findByCreatedById(recruiterId)
+                .stream().map(JobService::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public JobResponse getJob(Long id) {
+        JobPosting job = jobPostingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + id));
+        return toResponse(job);
+    }
+
+    private static JobResponse toResponse(JobPosting job) {
+        return new JobResponse(
+                job.getId(),
+                job.getTitle(),
+                job.getDescription(),
+                job.getMinHeightCm(),
+                job.getMinWeightKg(),
+                job.getRequiredDegree(),
+                job.getOpenDate(),
+                job.getCloseDate(),
+                job.getExamDate(),
+                job.getStatus()
         );
     }
 

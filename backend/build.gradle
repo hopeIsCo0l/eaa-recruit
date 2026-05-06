@@ -9,7 +9,7 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(23)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -43,6 +43,9 @@ dependencies {
 
     // PostgreSQL driver
     runtimeOnly 'org.postgresql:postgresql'
+
+    // Flyway — runs db/migration/V*.sql on startup
+    implementation 'org.flywaydb:flyway-core'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
