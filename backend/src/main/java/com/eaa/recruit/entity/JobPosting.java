@@ -9,7 +9,7 @@ import java.time.LocalDate;
     name = "job_postings",
     indexes = {
         @Index(name = "idx_job_postings_status", columnList = "status"),
-        @Index(name = "idx_job_postings_created_by", columnList = "created_by")
+        @Index(name = "idx_job_postings_created_by", columnList = "created_by_id")
     }
 )
 public class JobPosting extends BaseEntity {
@@ -43,7 +43,7 @@ public class JobPosting extends BaseEntity {
     private JobPostingStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by", nullable = false, updatable = false)
+    @JoinColumn(name = "created_by_id", nullable = false, updatable = false)
     private User createdBy;
 
     protected JobPosting() {}
