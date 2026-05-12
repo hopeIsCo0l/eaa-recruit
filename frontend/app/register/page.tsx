@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
 type Field = { value: string; error: string; touched: boolean };
 const field = (value = ""): Field => ({ value, error: "", touched: false });
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [lang, setLang] = useState<"en" | "am">("en");
   const [fullName, setFullName] = useState(field());
   const [email, setEmail] = useState(field());
@@ -57,20 +59,19 @@ export default function RegisterPage() {
         email: email.value,
         password: password.value,
         name: fullName.value,
-        // @ts-expect-error — Better Auth additionalFields
-        role: "candidate",
+        phone: phone.value,
       });
       setLoading(false);
       if (signUpError) {
         setEmail((f) => ({
           ...f,
-          error: isEn ? "EMAIL ALREADY REGISTERED" : "ኢሜይሉ አስቀድሞ ተመዝግቧል",
+          error: signUpError.message || (isEn ? "EMAIL ALREADY REGISTERED" : "ኢሜይሉ አስቀድሞ ተመዝግቧል"),
           touched: true,
         }));
         setStep(1);
         return;
       }
-      setSuccess(true);
+      router.push(`/verify-otp?email=${encodeURIComponent(email.value)}`);
     }
   }
 
