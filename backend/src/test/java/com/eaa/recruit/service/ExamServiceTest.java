@@ -9,7 +9,7 @@ import com.eaa.recruit.entity.*;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
-import com.eaa.recruit.messaging.KafkaEventPublisher;
+import com.eaa.recruit.messaging.EventPublisher;
 import com.eaa.recruit.notification.CandidateNotificationPort;
 import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.repository.ExamRepository;
@@ -38,7 +38,7 @@ class ExamServiceTest {
     @Mock JobPostingRepository      jobPostingRepository;
     @Mock ApplicationRepository     applicationRepository;
     @Mock CandidateNotificationPort candidateNotificationPort;
-    @Mock KafkaEventPublisher       kafkaEventPublisher;
+    @Mock EventPublisher            eventPublisher;
 
     ExamService service;
 
@@ -48,7 +48,7 @@ class ExamServiceTest {
     @BeforeEach
     void setUp() {
         service = new ExamService(examRepository, jobPostingRepository, applicationRepository,
-                candidateNotificationPort, kafkaEventPublisher, new ObjectMapper());
+                candidateNotificationPort, eventPublisher, new ObjectMapper());
     }
 
     private static JobPosting job(User recruiter) {

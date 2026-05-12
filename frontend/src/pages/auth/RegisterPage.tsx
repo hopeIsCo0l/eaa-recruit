@@ -14,7 +14,7 @@ const schema = z.object({
   fullName:    z.string().min(2, 'Name must be at least 2 characters'),
   email:       z.email('Invalid email'),
   password:    z.string().min(8, 'Password must be at least 8 characters'),
-  phoneNumber: z.string().min(7, 'Enter a valid phone number'),
+  phone: z.string().min(7, 'Enter a valid phone number'),
 })
 type FormData = z.infer<typeof schema>
 
@@ -51,10 +51,10 @@ export function RegisterPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {(['fullName', 'email', 'phoneNumber'] as const).map((field) => (
+            {(['fullName', 'email', 'phone'] as const).map((field) => (
               <div key={field} className="space-y-2">
                 <Label htmlFor={field}>
-                  {{ fullName: 'Full Name', email: 'Email', phoneNumber: 'Phone Number' }[field]}
+                  {{ fullName: 'Full Name', email: 'Email', phone: 'Phone Number' }[field]}
                 </Label>
                 <Input
                   id={field}

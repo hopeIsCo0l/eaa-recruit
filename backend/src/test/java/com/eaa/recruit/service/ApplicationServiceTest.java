@@ -6,7 +6,7 @@ import com.eaa.recruit.entity.*;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
-import com.eaa.recruit.messaging.KafkaEventPublisher;
+import com.eaa.recruit.messaging.EventPublisher;
 import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.repository.JobPostingRepository;
 import com.eaa.recruit.repository.UserRepository;
@@ -34,7 +34,7 @@ class ApplicationServiceTest {
     @Mock JobPostingRepository     jobPostingRepository;
     @Mock UserRepository           userRepository;
     @Mock FileStorageService       fileStorageService;
-    @Mock KafkaEventPublisher      kafkaEventPublisher;
+    @Mock EventPublisher           eventPublisher;
     @Mock HardFilterService        hardFilterService;
     @Mock WeightedScoringService   weightedScoringService;
 
@@ -46,7 +46,7 @@ class ApplicationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ApplicationService(applicationRepository, jobPostingRepository,
-                userRepository, fileStorageService, kafkaEventPublisher,
+                userRepository, fileStorageService, eventPublisher,
                 hardFilterService, weightedScoringService);
     }
 
@@ -84,7 +84,7 @@ class ApplicationServiceTest {
 
         assertThat(resp.jobId()).isEqualTo(1L);
         assertThat(resp.status()).isEqualTo(ApplicationStatus.SUBMITTED);
-        verify(kafkaEventPublisher).publishCvUploaded(any());
+        verify(eventPublisher).publishCvUploaded(any());
     }
 
     @Test

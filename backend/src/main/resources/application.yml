@@ -53,29 +53,25 @@ spring:
           max-wait: ${REDIS_POOL_MAX_WAIT:500ms}
         shutdown-timeout: 200ms
 
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      acks: ${KAFKA_PRODUCER_ACKS:all}
-      retries: ${KAFKA_PRODUCER_RETRIES:3}
-      properties:
-        enable.idempotence: true
-        retry.backoff.ms: 500
-    consumer:
-      group-id: ${KAFKA_CONSUMER_GROUP:recruit-backend}
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "com.eaa.recruit.*"
-    admin:
-      auto-create: true
-
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASS:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
   servlet:
     multipart:
@@ -108,6 +104,14 @@ storage:
 
 internal:
   api-key: ${INTERNAL_API_KEY:change-me-internal-key}
+
+app:
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:${MAIL_USER:}}
+  events:
+    ai-service-url:  ${AI_SERVICE_URL:http://localhost:8000}
+    exam-engine-url: ${EXAM_ENGINE_URL:http://localhost:8090}
 
 scheduler:
   job-status:

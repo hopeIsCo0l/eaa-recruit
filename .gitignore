@@ -1,1 +1,8 @@
 CLAUDE.md
+.env
+.env.local
+.claude/
+.idea/
+backend/cv-uploads/
+BACKLOG_ISSUES.md
+WEEK9_PROGRESS_REPORT.md

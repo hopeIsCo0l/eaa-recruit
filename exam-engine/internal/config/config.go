@@ -12,8 +12,8 @@ type Config struct {
 	RedisPassword     string
 	RedisPoolSize     int
 	RedisMinIdle      int
-	KafkaBroker       string
 	SpringBaseURL     string
+	InternalApiKey    string
 	WorkerPoolSize    int
 	RateLimitRPS      int
 	HeartbeatInterval time.Duration
@@ -31,8 +31,8 @@ func Load() *Config {
 		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
 		RedisPoolSize:     getEnvInt("REDIS_POOL_SIZE", 20),
 		RedisMinIdle:      getEnvInt("REDIS_MIN_IDLE", 5),
-		KafkaBroker:       getEnv("KAFKA_BROKER", "localhost:9092"),
 		SpringBaseURL:     getEnv("SPRING_BASE_URL", "http://localhost:8080"),
+		InternalApiKey:    getEnv("INTERNAL_API_KEY", "change-me-internal-key"),
 		WorkerPoolSize:    getEnvInt("WORKER_POOL_SIZE", 10),
 		RateLimitRPS:      getEnvInt("RATE_LIMIT_RPS", 10),
 		HeartbeatInterval: getEnvDuration("HEARTBEAT_INTERVAL", 10*time.Second),

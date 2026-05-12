@@ -9,7 +9,7 @@ import com.eaa.recruit.entity.*;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
-import com.eaa.recruit.messaging.KafkaEventPublisher;
+import com.eaa.recruit.messaging.EventPublisher;
 import com.eaa.recruit.messaging.event.ExamBatchReadyEvent;
 import com.eaa.recruit.notification.CandidateNotificationPort;
 import com.eaa.recruit.repository.ApplicationRepository;
@@ -37,20 +37,20 @@ public class ExamService {
     private final JobPostingRepository      jobPostingRepository;
     private final ApplicationRepository     applicationRepository;
     private final CandidateNotificationPort candidateNotificationPort;
-    private final KafkaEventPublisher       kafkaEventPublisher;
+    private final EventPublisher            eventPublisher;
     private final ObjectMapper              objectMapper;
 
     public ExamService(ExamRepository examRepository,
                        JobPostingRepository jobPostingRepository,
                        ApplicationRepository applicationRepository,
                        CandidateNotificationPort candidateNotificationPort,
-                       KafkaEventPublisher kafkaEventPublisher,
+                       EventPublisher eventPublisher,
                        ObjectMapper objectMapper) {
         this.examRepository            = examRepository;
         this.jobPostingRepository      = jobPostingRepository;
         this.applicationRepository     = applicationRepository;
         this.candidateNotificationPort = candidateNotificationPort;
-        this.kafkaEventPublisher       = kafkaEventPublisher;
+        this.eventPublisher            = eventPublisher;
         this.objectMapper              = objectMapper;
     }
 
@@ -186,10 +186,6 @@ public class ExamService {
                 exam.getId(), jobId, candidateIds,
                 exam.getDurationMinutes(), scheduledAt);
 
-        try {
-            kafkaEventPublisher.publishExamBatchReady(event);
-        } catch (Exception e) {
-            log.error("Failed to publish EXAM_BATCH_READY for examId={}: {}", exam.getId(), e.getMessage(), e);
-        }
+        eventPublisher.publishExamBatchReady(event);
     }
 }

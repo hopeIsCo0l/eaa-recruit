@@ -13,7 +13,6 @@ import (
 	"github.com/EAA-recruit/exam-engine/internal/handlers"
 	"github.com/EAA-recruit/exam-engine/internal/middleware"
 	"github.com/EAA-recruit/exam-engine/internal/services"
-	pkgkafka "github.com/EAA-recruit/exam-engine/pkg/kafka"
 	pkgredis "github.com/EAA-recruit/exam-engine/pkg/redis"
 	"github.com/gin-gonic/gin"
 )
@@ -23,8 +22,6 @@ func main() {
 
 	// ── Infrastructure ──────────────────────────────────────────────────────────
 	rdb := pkgredis.NewClient(cfg)
-	rawProducer := pkgkafka.NewProducer(cfg)
-	consumerGroup := pkgkafka.NewConsumerGroup(cfg, "exam-engine")
 
 	// ── Services ─────────────────────────────────────────────────────────────────
 	questionCache := services.NewQuestionCache()
@@ -32,15 +29,15 @@ func main() {
 	batchSvc := services.NewBatchService(rdb, cfg)
 	aiClient := services.NewAIGradingClient(cfg)
 	pool := services.NewWorkerPool(cfg.WorkerPoolSize)
-	kafkaProducer := services.NewKafkaProducer(rawProducer)
-	gradingSvc := services.NewGradingService(questionCache, sessionSvc, aiClient, pool, kafkaProducer)
-	kafkaConsumer := services.NewKafkaConsumer(consumerGroup, questionCache, batchSvc, cfg, rawProducer)
+	springClient := services.NewSpringClient(cfg)
+	gradingSvc := services.NewGradingService(questionCache, sessionSvc, aiClient, pool, springClient)
 	countdownSvc := services.NewCountdownService(sessionSvc, batchSvc, gradingSvc)
 
 	// ── Handlers ─────────────────────────────────────────────────────────────────
 	healthHandler := handlers.NewHealthHandler(rdb, sessionSvc)
 	examHandler := handlers.NewExamHandler(sessionSvc, batchSvc, questionCache, gradingSvc)
 	heartbeatHandler := handlers.NewHeartbeatHandler(sessionSvc)
+	batchHandler := handlers.NewBatchHandler(questionCache, batchSvc, springClient, cfg)
 
 	// ── Worker pool — wires AI client as the grading handler (FR-43, FR-56) ─────
 	pool.Start(func(task services.GradingTask) {
@@ -55,7 +52,6 @@ func main() {
 
 	// ── Background goroutines ─────────────────────────────────────────────────
 	ctx, cancel := context.WithCancel(context.Background())
-	go kafkaConsumer.Start(ctx)                                                      // FR-58
 	go countdownSvc.Start(ctx)                                                       // FR-47
 	go countdownSvc.CheckHeartbeats(ctx, cfg.HeartbeatMisses, cfg.HeartbeatInterval) // FR-48
 
@@ -66,6 +62,9 @@ func main() {
 	// Unauthenticated
 	router.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "pong"}) })
 	router.GET("/health", healthHandler.Health) // FR-60 — no auth
+
+	// Internal — service-to-service, secured with X-Internal-Api-Key header
+	router.POST("/api/v1/batches/ready", batchHandler.BatchReady)
 
 	// Exam routes — JWT required
 	exam := router.Group("/exam", middleware.JWTAuth())
@@ -94,7 +93,7 @@ func main() {
 	<-quit
 	log.Println("shutting down exam engine...")
 
-	cancel() // stop Kafka consumer, countdown, heartbeat monitor
+	cancel() // stop countdown, heartbeat monitor
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
@@ -103,8 +102,6 @@ func main() {
 	}
 
 	pool.Stop() // drain pending grading tasks before exit (FR-43)
-	_ = rawProducer.Close()
-	_ = consumerGroup.Close()
 	_ = rdb.Close()
 	log.Println("exam engine stopped")
 }

@@ -10,7 +10,7 @@ export interface RegisterRequest {
   fullName: string
   email: string
   password: string
-  phoneNumber: string
+  phone: string
 }
 
 export interface OtpRequest {

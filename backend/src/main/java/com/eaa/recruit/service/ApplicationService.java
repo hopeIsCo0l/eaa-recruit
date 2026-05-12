@@ -13,7 +13,7 @@ import com.eaa.recruit.entity.User;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
-import com.eaa.recruit.messaging.KafkaEventPublisher;
+import com.eaa.recruit.messaging.EventPublisher;
 import com.eaa.recruit.messaging.event.CvUploadedEvent;
 import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.repository.JobPostingRepository;
@@ -36,7 +36,7 @@ public class ApplicationService {
     private final JobPostingRepository   jobPostingRepository;
     private final UserRepository         userRepository;
     private final FileStorageService     fileStorageService;
-    private final KafkaEventPublisher    kafkaEventPublisher;
+    private final EventPublisher         eventPublisher;
     private final HardFilterService      hardFilterService;
     private final WeightedScoringService weightedScoringService;
 
@@ -44,14 +44,14 @@ public class ApplicationService {
                                JobPostingRepository jobPostingRepository,
                                UserRepository userRepository,
                                FileStorageService fileStorageService,
-                               KafkaEventPublisher kafkaEventPublisher,
+                               EventPublisher eventPublisher,
                                HardFilterService hardFilterService,
                                WeightedScoringService weightedScoringService) {
         this.applicationRepository = applicationRepository;
         this.jobPostingRepository  = jobPostingRepository;
         this.userRepository        = userRepository;
         this.fileStorageService    = fileStorageService;
-        this.kafkaEventPublisher   = kafkaEventPublisher;
+        this.eventPublisher        = eventPublisher;
         this.hardFilterService     = hardFilterService;
         this.weightedScoringService = weightedScoringService;
     }
@@ -82,14 +82,9 @@ public class ApplicationService {
 
         log.info("Application created id={} candidateId={} jobId={}", application.getId(), principal.id(), jobId);
 
-        // FR-20: publish CV_UPLOADED event (fire-and-forget — failure does not roll back)
-        try {
-            kafkaEventPublisher.publishCvUploaded(
-                    CvUploadedEvent.of(application.getId(), principal.id(), jobId, cvPath));
-        } catch (Exception e) {
-            log.error("Failed to publish CV_UPLOADED event for applicationId={}: {}",
-                    application.getId(), e.getMessage(), e);
-        }
+        // FR-20: dispatch CV_UPLOADED event (fire-and-forget; publisher swallows failures)
+        eventPublisher.publishCvUploaded(
+                CvUploadedEvent.of(application.getId(), principal.id(), jobId, cvPath));
 
         return new SubmitApplicationResponse(
                 application.getId(),
