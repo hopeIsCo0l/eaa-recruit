@@ -14,7 +14,7 @@ type GradingService struct {
 	sessionSvc    *SessionService
 	aiClient      *AIGradingClient
 	pool          *WorkerPool
-	kafkaProducer *KafkaProducer
+	springClient  *SpringClient
 }
 
 func NewGradingService(
@@ -22,14 +22,14 @@ func NewGradingService(
 	ss *SessionService,
 	ai *AIGradingClient,
 	pool *WorkerPool,
-	kp *KafkaProducer,
+	sc *SpringClient,
 ) *GradingService {
 	return &GradingService{
 		questionCache: qc,
 		sessionSvc:    ss,
 		aiClient:      ai,
 		pool:          pool,
-		kafkaProducer: kp,
+		springClient:  sc,
 	}
 }
 
@@ -70,7 +70,7 @@ func (g *GradingService) Grade(ctx context.Context, session *domain.ExamSession,
 		if err := g.sessionSvc.Update(ctx, session, ttl); err != nil {
 			log.Printf("failed to persist grading result for %s: %v", session.CandidateID, err)
 		}
-		g.kafkaProducer.PublishExamCompleted(session)
+		g.springClient.PublishExamCompleted(session)
 		log.Printf("grading complete for %s: MCQ=%.2f, total=%.2f", session.CandidateID, mcqScore, session.TotalScore)
 	} else {
 		session.TotalScore = mcqScore
@@ -108,7 +108,7 @@ func (g *GradingService) dispatchShortAnswerGrading(session *domain.ExamSession,
 		if err := g.sessionSvc.Update(ctx, sess, ttl); err != nil {
 			log.Printf("failed to persist short-answer score for %s: %v", session.CandidateID, err)
 		}
-		g.kafkaProducer.PublishExamCompleted(sess)
+		g.springClient.PublishExamCompleted(sess)
 		log.Printf("short-answer graded for %s q=%s score=%.2f total=%.2f",
 			session.CandidateID, q.ID, score, sess.TotalScore)
 	}()

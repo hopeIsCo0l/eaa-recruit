@@ -127,6 +127,10 @@ public class Application extends BaseEntity {
         this.status           = ApplicationStatus.AI_SCREENING;
     }
 
+    public void updateXaiReportUrl(String reportUrl) {
+        this.xaiReportUrl = reportUrl;
+    }
+
     public void markHardFilterPassed() {
         this.hardFilterPassed = true;
     }

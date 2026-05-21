@@ -6,6 +6,8 @@ import com.eaa.recruit.dto.auth.RegistrationResponse;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ConflictException;
 import com.eaa.recruit.exception.GlobalExceptionHandler;
+import com.eaa.recruit.ratelimit.RateLimitProperties;
+import com.eaa.recruit.ratelimit.RateLimitService;
 import com.eaa.recruit.security.JwtAccessDeniedHandler;
 import com.eaa.recruit.security.JwtAuthEntryPoint;
 import com.eaa.recruit.security.JwtAuthenticationFilter;
@@ -13,6 +15,8 @@ import com.eaa.recruit.security.JwtProperties;
 import com.eaa.recruit.security.JwtTokenProvider;
 import com.eaa.recruit.security.UserDetailsServiceImpl;
 import com.eaa.recruit.service.CandidateRegistrationService;
+import com.eaa.recruit.service.LoginService;
+import com.eaa.recruit.service.PasswordResetService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -43,6 +47,10 @@ class AuthControllerTest {
     @MockBean  CandidateRegistrationService registrationService;
     @MockBean  UserDetailsServiceImpl       userDetailsService;
     @MockBean  BlockedUserCacheService      blockedUserCacheService;
+    @MockBean  RateLimitService             rateLimitService;
+    @MockBean  RateLimitProperties          rateLimitProperties;
+    @MockBean  LoginService                 loginService;
+    @MockBean  PasswordResetService         passwordResetService;
 
     private static final String VALID_BODY = """
             {

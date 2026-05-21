@@ -3,8 +3,12 @@ package com.eaa.recruit.controller;
 import com.eaa.recruit.config.InternalApiKeyProperties;
 import com.eaa.recruit.dto.ApiResponse;
 import com.eaa.recruit.dto.application.AiScoreCallbackRequest;
+import com.eaa.recruit.dto.internal.ExamCompletedRequest;
 import com.eaa.recruit.dto.internal.ExamScoreCallbackRequest;
+import com.eaa.recruit.entity.Application;
+import com.eaa.recruit.exception.ResourceNotFoundException;
 import com.eaa.recruit.exception.UnauthorizedException;
+import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.service.ApplicationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +23,15 @@ import org.springframework.web.bind.annotation.*;
 public class InternalController {
 
     private final ApplicationService       applicationService;
+    private final ApplicationRepository    applicationRepository;
     private final InternalApiKeyProperties apiKeyProperties;
 
     public InternalController(ApplicationService applicationService,
+                               ApplicationRepository applicationRepository,
                                InternalApiKeyProperties apiKeyProperties) {
-        this.applicationService = applicationService;
-        this.apiKeyProperties   = apiKeyProperties;
+        this.applicationService    = applicationService;
+        this.applicationRepository = applicationRepository;
+        this.apiKeyProperties      = apiKeyProperties;
     }
 
     /**
@@ -55,6 +62,29 @@ public class InternalController {
         validateApiKey(apiKey);
         applicationService.applyExamScore(applicationId, request);
         return ResponseEntity.ok(ApiResponse.success("Exam score applied"));
+    }
+
+    /**
+     * POST /api/v1/internal/exam-completed
+     * Called by the Go exam engine when an exam finishes. Resolves the
+     * application by (candidateId, jobId) and applies the score.
+     */
+    @PostMapping("/exam-completed")
+    public ResponseEntity<ApiResponse<Void>> receiveExamCompleted(
+            @RequestHeader("X-Internal-Api-Key") String apiKey,
+            @Valid @RequestBody ExamCompletedRequest request) {
+
+        validateApiKey(apiKey);
+        Long candidateId = Long.parseLong(request.candidateId());
+        Long jobId       = Long.parseLong(request.jobId());
+
+        Application application = applicationRepository.findByCandidateIdAndJobId(candidateId, jobId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Application not found for candidateId=" + candidateId + " jobId=" + jobId));
+
+        applicationService.applyExamScore(application.getId(),
+                new ExamScoreCallbackRequest(request.examScore(), request.completedAt()));
+        return ResponseEntity.ok(ApiResponse.success("Exam completion recorded"));
     }
 
     private void validateApiKey(String provided) {

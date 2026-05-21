@@ -1,5 +1,4 @@
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -15,12 +14,13 @@ from reportlab.platypus import (
     Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
+from src.config import settings
 from src.services.attribution_service import AttributionResult
 from src.services.justification_engine import Justification
 
 logger = logging.getLogger(__name__)
 
-STORAGE_DIR = Path(os.getenv("PDF_STORAGE_DIR", "./reports"))
+STORAGE_DIR = Path(settings.pdf_storage_dir)
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Colours

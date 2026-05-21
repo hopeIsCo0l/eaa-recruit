@@ -23,13 +23,16 @@ public class CandidateRegistrationService {
     private final UserRepository   userRepository;
     private final PasswordEncoder  passwordEncoder;
     private final OtpService       otpService;
+    private final AuditLogService  auditLogService;
 
     public CandidateRegistrationService(UserRepository userRepository,
                                         PasswordEncoder passwordEncoder,
-                                        OtpService otpService) {
+                                        OtpService otpService,
+                                        AuditLogService auditLogService) {
         this.userRepository  = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.otpService      = otpService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -49,6 +52,7 @@ public class CandidateRegistrationService {
         user = userRepository.save(user);
 
         log.info("Candidate account created id={} email='{}'", user.getId(), user.getEmail());
+        auditLogService.log("USER", user.getId(), null, "REGISTERED", user, null);
 
         // Send OTP to email; phone support is future work
         boolean sent = otpService.sendOtp(request.email());
@@ -63,6 +67,27 @@ public class CandidateRegistrationService {
                 user.getEmail(),
                 "Registration successful. A verification code has been sent to " + request.email()
         );
+    }
+
+    /**
+     * Issues a fresh OTP, invalidating any prior one. User must already exist and be INACTIVE.
+     *
+     * @throws BusinessException if no pending account is found or notification dispatch fails
+     */
+    public void resendOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("No pending registration found for: " + email));
+
+        if (user.isActive()) {
+            throw new BusinessException("Account is already verified");
+        }
+
+        boolean sent = otpService.resendOtp(email);
+        if (!sent) {
+            throw new BusinessException(
+                    "Could not send verification code. Please try again later.");
+        }
+        log.info("OTP resent for email='{}'", email);
     }
 
     /**
@@ -83,5 +108,6 @@ public class CandidateRegistrationService {
 
         user.activate();
         log.info("Candidate account activated id={} email='{}'", user.getId(), email);
+        auditLogService.log("USER", user.getId(), "INACTIVE", "ACTIVE", user, "Email verified");
     }
 }

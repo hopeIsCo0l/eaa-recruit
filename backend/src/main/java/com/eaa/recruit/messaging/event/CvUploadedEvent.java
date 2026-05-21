@@ -11,11 +11,13 @@ public record CvUploadedEvent(
         Long   candidateId,
         Long   jobId,
         String cvStoragePath,
+        String jobDescription,
         Instant occurredAt
 ) {
     public static CvUploadedEvent of(Long applicationId, Long candidateId,
-                                     Long jobId, String cvStoragePath) {
+                                     Long jobId, String cvStoragePath,
+                                     String jobDescription) {
         return new CvUploadedEvent(applicationId, candidateId, jobId,
-                                   cvStoragePath, Instant.now());
+                                   cvStoragePath, jobDescription, Instant.now());
     }
 }

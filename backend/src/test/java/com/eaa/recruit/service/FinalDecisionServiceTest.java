@@ -30,6 +30,7 @@ class FinalDecisionServiceTest {
     @Mock UserRepository            userRepository;
     @Mock CandidateNotificationPort candidateNotificationPort;
     @Mock AuditLogService           auditLogService;
+    @Mock com.eaa.recruit.messaging.XaiReportClient xaiReportClient;
 
     FinalDecisionService service;
 
@@ -39,7 +40,7 @@ class FinalDecisionServiceTest {
     @BeforeEach
     void setUp() {
         service = new FinalDecisionService(applicationRepository, userRepository,
-                candidateNotificationPort, auditLogService);
+                candidateNotificationPort, auditLogService, xaiReportClient);
     }
 
     private Application makeShortlistedApp() {

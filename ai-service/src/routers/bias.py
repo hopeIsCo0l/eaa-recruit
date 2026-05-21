@@ -5,12 +5,13 @@ POST /bias/analyse   — run analysis for a job batch
 GET  /bias/report/{job_id} — retrieve stored report (FR-40 admin analytics)
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from src.services import bias_service
+from src.utils.auth import verify_internal_api_key
 
-router = APIRouter(prefix="/bias")
+router = APIRouter(prefix="/bias", dependencies=[Depends(verify_internal_api_key)])
 
 
 class CandidateRecord(BaseModel):

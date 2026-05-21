@@ -31,12 +31,13 @@ class CandidateRegistrationServiceTest {
     @Mock UserRepository   userRepository;
     @Mock PasswordEncoder  passwordEncoder;
     @Mock OtpService       otpService;
+    @Mock AuditLogService  auditLogService;
 
     CandidateRegistrationService service;
 
     @BeforeEach
     void setUp() {
-        service = new CandidateRegistrationService(userRepository, passwordEncoder, otpService);
+        service = new CandidateRegistrationService(userRepository, passwordEncoder, otpService, auditLogService);
     }
 
     private static CandidateRegistrationRequest validRequest() {

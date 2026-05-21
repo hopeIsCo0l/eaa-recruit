@@ -26,12 +26,13 @@ class LoginServiceTest {
     @Mock UserRepository   userRepository;
     @Mock PasswordEncoder  passwordEncoder;
     @Mock JwtTokenProvider jwtTokenProvider;
+    @Mock AuditLogService  auditLogService;
 
     LoginService service;
 
     @BeforeEach
     void setUp() {
-        service = new LoginService(userRepository, passwordEncoder, jwtTokenProvider);
+        service = new LoginService(userRepository, passwordEncoder, jwtTokenProvider, auditLogService);
     }
 
     private User activeUser() {

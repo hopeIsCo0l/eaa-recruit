@@ -17,13 +17,16 @@ public class PasswordResetService {
     private final UserRepository  userRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService      otpService;
+    private final AuditLogService auditLogService;
 
     public PasswordResetService(UserRepository userRepository,
                                 PasswordEncoder passwordEncoder,
-                                OtpService otpService) {
+                                OtpService otpService,
+                                AuditLogService auditLogService) {
         this.userRepository  = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.otpService      = otpService;
+        this.auditLogService = auditLogService;
     }
 
     /** Silently no-op for unknown emails — prevents user enumeration. */
@@ -44,5 +47,7 @@ public class PasswordResetService {
 
         user.changePassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+
+        auditLogService.log("USER", user.getId(), null, "PASSWORD_RESET", user, null);
     }
 }
