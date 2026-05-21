@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI
 
-from src.routers import bias, cv_scoring, health, ranking
+from src.routers import bias, cv_scoring, grading, health, ranking, xai
 from src.services.embedding_service import load_model
 
 logging.basicConfig(
@@ -22,3 +22,5 @@ app.include_router(health.router)
 app.include_router(ranking.router)
 app.include_router(bias.router)
 app.include_router(cv_scoring.router)
+app.include_router(grading.router)
+app.include_router(xai.router)

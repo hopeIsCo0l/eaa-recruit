@@ -56,12 +56,12 @@ class OtpServiceTest {
     }
 
     @Test
-    void sendOtp_returnsTrue_evenIfNotificationFails() {
+    void sendOtp_returnsFalseAndInvalidates_whenNotificationFails() {
         when(otpCacheService.generateAndStore(anyString())).thenReturn(Optional.of("654321"));
         doThrow(new RuntimeException("SMTP down")).when(notificationPort).send(anyString(), anyString());
 
-        // OTP is stored — sendOtp should still return true
-        assertThat(otpService.sendOtp("alice@example.com")).isTrue();
+        assertThat(otpService.sendOtp("alice@example.com")).isFalse();
+        verify(otpCacheService).invalidate("alice@example.com");
     }
 
     // ── verify ───────────────────────────────────────────────────────────────

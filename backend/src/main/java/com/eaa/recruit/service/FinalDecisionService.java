@@ -7,6 +7,7 @@ import com.eaa.recruit.entity.ApplicationStatus;
 import com.eaa.recruit.entity.User;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
+import com.eaa.recruit.messaging.XaiReportClient;
 import com.eaa.recruit.notification.CandidateNotificationPort;
 import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.repository.UserRepository;
@@ -37,15 +38,18 @@ public class FinalDecisionService {
     private final UserRepository            userRepository;
     private final CandidateNotificationPort candidateNotificationPort;
     private final AuditLogService           auditLogService;
+    private final XaiReportClient           xaiReportClient;
 
     public FinalDecisionService(ApplicationRepository applicationRepository,
                                  UserRepository userRepository,
                                  CandidateNotificationPort candidateNotificationPort,
-                                 AuditLogService auditLogService) {
+                                 AuditLogService auditLogService,
+                                 XaiReportClient xaiReportClient) {
         this.applicationRepository     = applicationRepository;
         this.userRepository            = userRepository;
         this.candidateNotificationPort = candidateNotificationPort;
         this.auditLogService           = auditLogService;
+        this.xaiReportClient           = xaiReportClient;
     }
 
     @Transactional
@@ -85,6 +89,10 @@ public class FinalDecisionService {
 
         log.info("Decision recorded applicationId={} decision={} by={}",
                 applicationId, request.decision(), principal.id());
+
+        // FR-35: kick off async XAI PDF build. Stores downloadUrl on the application
+        // when ai-service responds; failures are logged and swallowed.
+        xaiReportClient.buildAndStore(applicationId);
 
         return new DecisionResponse(
                 applicationId,

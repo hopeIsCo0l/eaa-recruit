@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --retries 10 --timeout 300 -r requirements.txt
+RUN python -m spacy download en_core_web_sm
 
 COPY src/ src/
 

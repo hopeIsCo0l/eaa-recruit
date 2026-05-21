@@ -27,12 +27,13 @@ class PasswordResetServiceTest {
     @Mock UserRepository  userRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock OtpService      otpService;
+    @Mock AuditLogService auditLogService;
 
     PasswordResetService service;
 
     @BeforeEach
     void setUp() {
-        service = new PasswordResetService(userRepository, passwordEncoder, otpService);
+        service = new PasswordResetService(userRepository, passwordEncoder, otpService, auditLogService);
     }
 
     @Test

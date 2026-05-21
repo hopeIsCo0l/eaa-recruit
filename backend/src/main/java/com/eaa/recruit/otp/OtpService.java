@@ -54,9 +54,9 @@ public class OtpService {
         try {
             notificationPort.send(recipient, otp.get());
         } catch (Exception ex) {
-            // Notification failure should not block the flow — OTP is stored,
-            // user can request resend. Log and continue.
             log.error("OTP notification failed for recipient='{}': {}", recipient, ex.getMessage(), ex);
+            otpCacheService.invalidate(recipient);
+            return false;
         }
 
         return true;

@@ -3,13 +3,13 @@ package com.eaa.recruit.otp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(name = "app.mail.enabled", havingValue = "true")
+@ConditionalOnExpression("'${MAIL_ENABLED:false}' == 'true' || T(org.springframework.util.StringUtils).hasText('${MAIL_USER:}')")
 public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpOtpNotificationAdapter.class);

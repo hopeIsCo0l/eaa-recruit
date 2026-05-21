@@ -5,6 +5,9 @@ spring:
   application:
     name: eaa-recruit-backend
 
+  config:
+    import: "optional:file:../.env[.properties],optional:file:./.env[.properties]"
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/recruitment}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -104,6 +107,9 @@ storage:
 
 internal:
   api-key: ${INTERNAL_API_KEY:change-me-internal-key}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
 app:
   mail:

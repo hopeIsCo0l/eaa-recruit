@@ -43,6 +43,12 @@ services:
       EXAM_ENGINE_URL: http://exam-engine:8090
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-min-256-bits-long-secret-key-12345}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,6 +65,7 @@ services:
       REDIS_URL: redis://redis:6379
       SPRING_CALLBACK_URL: http://backend:8080
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      AI_SERVICE_PUBLIC_URL: ${AI_SERVICE_PUBLIC_URL:-http://ai-service:8000}
     depends_on:
       redis:
         condition: service_healthy
@@ -85,6 +92,8 @@ services:
     build:
       context: ./frontend
     container_name: eaa-frontend
+    environment:
+      BACKEND_URL: http://backend:8080
     depends_on:
       - backend
     ports:

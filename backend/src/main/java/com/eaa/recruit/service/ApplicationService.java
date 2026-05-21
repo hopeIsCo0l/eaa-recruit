@@ -84,7 +84,8 @@ public class ApplicationService {
 
         // FR-20: dispatch CV_UPLOADED event (fire-and-forget; publisher swallows failures)
         eventPublisher.publishCvUploaded(
-                CvUploadedEvent.of(application.getId(), principal.id(), jobId, cvPath));
+                CvUploadedEvent.of(application.getId(), principal.id(), jobId, cvPath,
+                                   job.getDescription()));
 
         return new SubmitApplicationResponse(
                 application.getId(),

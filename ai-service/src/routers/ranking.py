@@ -1,7 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/rank")
+from src.utils.auth import verify_internal_api_key
+
+router = APIRouter(prefix="/rank", dependencies=[Depends(verify_internal_api_key)])
 
 
 class CandidateInput(BaseModel):
