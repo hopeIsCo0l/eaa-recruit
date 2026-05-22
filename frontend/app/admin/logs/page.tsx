@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 type Severity = "INFO" | "WARN" | "ERROR" | "CRITICAL";
 type Category = "AUTH" | "DATA" | "SYSTEM" | "API";
@@ -16,20 +17,28 @@ interface LogEntry {
   detail: string;
 }
 
-const MOCK_LOGS: LogEntry[] = [
-  { id: "L0089", timestamp: "2026-04-25 14:32:11", actor: "a.tesfaye@eaa.et", category: "AUTH",   severity: "INFO",     action: "ADMIN_LOGIN",           ip: "197.156.72.10",  detail: "Successful login via 2FA" },
-  { id: "L0088", timestamp: "2026-04-25 14:28:44", actor: "system",           category: "SYSTEM", severity: "INFO",     action: "CV_PARSE_BATCH",        ip: "localhost",      detail: "Batch of 12 CVs processed — 12 success, 0 failed" },
-  { id: "L0087", timestamp: "2026-04-25 13:47:03", actor: "h.girma@eaa.et",  category: "DATA",   severity: "WARN",     action: "EXPORT_CANDIDATE_LIST", ip: "197.156.72.14",  detail: "Recruiter exported 89 candidate records (xlsx)" },
-  { id: "L0086", timestamp: "2026-04-25 12:10:59", actor: "unknown",          category: "AUTH",   severity: "CRITICAL", action: "FAILED_LOGIN_×5",       ip: "41.66.2.101",    detail: "5 consecutive failed attempts — account locked" },
-  { id: "L0085", timestamp: "2026-04-25 11:55:20", actor: "y.haile@gmail.com",category: "API",   severity: "INFO",     action: "CV_UPLOAD",             ip: "197.156.90.4",   detail: "CV submitted — PDF 342KB — parse queued" },
-  { id: "L0084", timestamp: "2026-04-25 11:02:35", actor: "d.mulugeta@eaa.et",category: "DATA",  severity: "INFO",     action: "SHORTLIST_UPDATED",     ip: "197.156.72.18",  detail: "Candidate U127 moved to shortlist for role R03" },
-  { id: "L0083", timestamp: "2026-04-25 09:30:00", actor: "system",           category: "SYSTEM", severity: "WARN",    action: "HIGH_CPU_ALERT",        ip: "localhost",      detail: "CPU usage peaked at 87% for 3 minutes" },
-  { id: "L0082", timestamp: "2026-04-25 08:15:48", actor: "a.tesfaye@eaa.et", category: "DATA",  severity: "INFO",    action: "CONFIG_UPDATED",        ip: "197.156.72.10",  detail: "Shortlist cutoff updated from 65% to 70%" },
-  { id: "L0081", timestamp: "2026-04-24 18:00:01", actor: "system",           category: "SYSTEM", severity: "INFO",   action: "NIGHTLY_BACKUP",        ip: "localhost",      detail: "pgvector snapshot completed — 1.2GB compressed" },
-  { id: "L0080", timestamp: "2026-04-24 16:47:22", actor: "d.mulugeta@eaa.et",category: "AUTH",  severity: "INFO",   action: "RECRUITER_LOGIN",       ip: "197.156.72.18",  detail: "Successful login" },
-  { id: "L0079", timestamp: "2026-04-24 14:11:09", actor: "system",           category: "API",   severity: "ERROR",  action: "SMS_GATEWAY_FAIL",      ip: "localhost",      detail: "Ethiotelecom SMS API returned 503 — 3 retries exhausted" },
-  { id: "L0078", timestamp: "2026-04-24 09:00:00", actor: "system",           category: "SYSTEM", severity: "INFO",  action: "VECTOR_INDEX_REBUILD",  ip: "localhost",      detail: "pgvector HNSW index rebuilt — 1,284 vectors indexed" },
-];
+type BackendAuditLog = {
+  id: number;
+  entityType: string;
+  entityId: number;
+  oldStatus?: string;
+  newStatus: string;
+  changedByEmail?: string;
+  changedAt: string;
+  reason?: string;
+};
+
+function severityFor(status: string): Severity {
+  if (status.includes("FAIL") || status.includes("BLOCKED")) return "ERROR";
+  if (status.includes("WARN")) return "WARN";
+  return "INFO";
+}
+
+function categoryFor(entityType: string): Category {
+  if (entityType === "USER")        return "AUTH";
+  if (entityType === "APPLICATION") return "DATA";
+  return "SYSTEM";
+}
 
 const SEV_STYLES: Record<Severity, { bg: string; text: string; border: string }> = {
   INFO:     { bg: "rgba(245,245,240,0.04)", text: "var(--c-text-muted)",    border: "var(--c-border)" },
@@ -59,8 +68,31 @@ export default function LogsPage() {
   const [catFilter, setCatFilter]   = useState<Category | "ALL">("ALL");
   const [search, setSearch]         = useState("");
   const [expanded, setExpanded]     = useState<string | null>(null);
+  const [logs, setLogs]             = useState<LogEntry[]>([]);
 
-  const filtered = MOCK_LOGS.filter((l) => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await apiFetch<{ content?: BackendAuditLog[] } | BackendAuditLog[]>(
+        "/api/v1/admin/audit-logs",
+      );
+      if (cancelled || error || !data) return;
+      const rows = Array.isArray(data) ? data : data.content ?? [];
+      setLogs(rows.map((l) => ({
+        id: String(l.id),
+        timestamp: l.changedAt,
+        actor: l.changedByEmail ?? "system",
+        category: categoryFor(l.entityType),
+        severity: severityFor(l.newStatus),
+        action: l.newStatus,
+        ip: "—",
+        detail: `${l.entityType}#${l.entityId} ${l.oldStatus ? l.oldStatus + " → " : ""}${l.newStatus}${l.reason ? " (" + l.reason + ")" : ""}`,
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = logs.filter((l) => {
     const matchSev = sevFilter === "ALL" || l.severity === sevFilter;
     const matchCat = catFilter === "ALL" || l.category === catFilter;
     const matchQ   = search === "" ||
@@ -70,9 +102,9 @@ export default function LogsPage() {
     return matchSev && matchCat && matchQ;
   });
 
-  const criticalCount = MOCK_LOGS.filter((l) => l.severity === "CRITICAL").length;
-  const errorCount    = MOCK_LOGS.filter((l) => l.severity === "ERROR").length;
-  const warnCount     = MOCK_LOGS.filter((l) => l.severity === "WARN").length;
+  const criticalCount = logs.filter((l) => l.severity === "CRITICAL").length;
+  const errorCount    = logs.filter((l) => l.severity === "ERROR").length;
+  const warnCount     = logs.filter((l) => l.severity === "WARN").length;
 
   return (
     <div className="p-6 md:p-8 max-w-[1400px] mx-auto">
@@ -236,7 +268,7 @@ export default function LogsPage() {
 
       <div className="flex items-center justify-between mt-3">
         <span className="font-ibm-mono text-[9px] text-[var(--c-text-faint)] tracking-[1px]">
-          SHOWING {filtered.length} OF {MOCK_LOGS.length} ENTRIES — LAST 24H
+          SHOWING {filtered.length} OF {logs.length} ENTRIES — LAST 24H
         </span>
         <button className="font-ibm-mono text-[9px] text-[var(--c-accent)] hover:text-[var(--c-accent-hover)] tracking-[1px] transition-colors">
           EXPORT CSV /

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 type JobStatus = "OPEN" | "CLOSED" | "DRAFT";
 
@@ -17,16 +18,15 @@ interface Job {
   cutoff: number;
 }
 
-const MOCK_JOBS: Job[] = [
-  { id: "R01", title: "First Officer (B737)",        department: "FLIGHT OPERATIONS",       status: "OPEN",   posted: "2026-04-01", deadline: "2026-05-01", applicants: 342, shortlisted: 87, examReady: 62, cutoff: 70 },
-  { id: "R02", title: "Senior Flight Attendant",     department: "IN-FLIGHT SERVICES",      status: "OPEN",   posted: "2026-04-05", deadline: "2026-05-10", applicants: 519, shortlisted: 114, examReady: 98, cutoff: 65 },
-  { id: "R03", title: "Aircraft Maintenance Tech.",  department: "MAINTENANCE & ENG.",      status: "OPEN",   posted: "2026-04-10", deadline: "2026-05-15", applicants: 221, shortlisted: 43, examReady: 37, cutoff: 72 },
-  { id: "R04", title: "Ground Ops Coordinator",      department: "GROUND OPERATIONS",       status: "OPEN",   posted: "2026-04-12", deadline: "2026-05-20", applicants: 88,  shortlisted: 22, examReady: 18, cutoff: 60 },
-  { id: "R05", title: "Safety & Quality Inspector",  department: "QUALITY ASSURANCE",       status: "OPEN",   posted: "2026-04-14", deadline: "2026-05-25", applicants: 64,  shortlisted: 11, examReady: 9,  cutoff: 75 },
-  { id: "R06", title: "Cabin Crew Trainer",          department: "IN-FLIGHT SERVICES",      status: "CLOSED", posted: "2026-03-01", deadline: "2026-04-01", applicants: 289, shortlisted: 61, examReady: 61, cutoff: 68 },
-  { id: "R07", title: "Avionics Engineer",           department: "MAINTENANCE & ENG.",      status: "DRAFT",  posted: "—",          deadline: "—",          applicants: 0,   shortlisted: 0,  examReady: 0,  cutoff: 80 },
-  { id: "R08", title: "Cargo Ops Officer",           department: "CARGO OPERATIONS",        status: "DRAFT",  posted: "—",          deadline: "—",          applicants: 0,   shortlisted: 0,  examReady: 0,  cutoff: 65 },
-];
+type BackendJob = {
+  id: number;
+  title: string;
+  department?: string;
+  status: JobStatus;
+  postedAt?: string;
+  applicationDeadline?: string;
+  applicantCount?: number;
+};
 
 const STATUS_STYLES: Record<JobStatus, { bg: string; text: string; dot: string }> = {
   OPEN:   { bg: "rgba(255,214,0,0.08)", text: "var(--c-accent)", dot: "var(--c-accent)" },
@@ -67,8 +67,30 @@ export default function JobsPage() {
   const [statusFilter, setStatusFilter] = useState<JobStatus | "ALL">("ALL");
   const [search, setSearch]             = useState("");
   const [expanded, setExpanded]         = useState<string | null>(null);
+  const [jobs, setJobs]                 = useState<Job[]>([]);
 
-  const filtered = MOCK_JOBS.filter((j) => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await apiFetch<BackendJob[]>("/api/v1/jobs");
+      if (cancelled || error || !data) return;
+      setJobs(data.map((j) => ({
+        id: String(j.id),
+        title: j.title,
+        department: j.department ?? "—",
+        status: j.status,
+        posted: j.postedAt ?? "—",
+        deadline: j.applicationDeadline ?? "—",
+        applicants: j.applicantCount ?? 0,
+        shortlisted: 0,
+        examReady: 0,
+        cutoff: 0,
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = jobs.filter((j) => {
     const matchStatus = statusFilter === "ALL" || j.status === statusFilter;
     const matchSearch = j.title.toLowerCase().includes(search.toLowerCase()) ||
       j.department.toLowerCase().includes(search.toLowerCase()) ||
@@ -76,10 +98,10 @@ export default function JobsPage() {
     return matchStatus && matchSearch;
   });
 
-  const openCount   = MOCK_JOBS.filter((j) => j.status === "OPEN").length;
-  const closedCount = MOCK_JOBS.filter((j) => j.status === "CLOSED").length;
-  const draftCount  = MOCK_JOBS.filter((j) => j.status === "DRAFT").length;
-  const totalApps   = MOCK_JOBS.reduce((s, j) => s + j.applicants, 0);
+  const openCount   = jobs.filter((j) => j.status === "OPEN").length;
+  const closedCount = jobs.filter((j) => j.status === "CLOSED").length;
+  const draftCount  = jobs.filter((j) => j.status === "DRAFT").length;
+  const totalApps   = jobs.reduce((s, j) => s + j.applicants, 0);
 
   return (
     <div className="p-6 md:p-8 max-w-[1400px] mx-auto">

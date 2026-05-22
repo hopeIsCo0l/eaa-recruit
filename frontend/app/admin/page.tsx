@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
+import { apiFetch } from "@/lib/api";
 
 type VolumePoint = { day: string; count: number };
 type Kpis = { totalApplications: number; activeJobs: number; totalUsers: number };
@@ -66,13 +67,23 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/dashboard/admin")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.kpis)              setKpis(data.kpis);
-        if (data.applicationVolume) setApplicationVolume(data.applicationVolume);
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      const [users, jobs] = await Promise.all([
+        apiFetch<unknown[]>("/api/v1/admin/users"),
+        apiFetch<unknown[]>("/api/v1/jobs"),
+      ]);
+      if (cancelled) return;
+      const userCount = Array.isArray(users.data) ? users.data.length : 0;
+      const jobList  = Array.isArray(jobs.data) ? jobs.data : [];
+      setKpis({
+        totalApplications: 0, // wire when /admin/applications/count exists
+        activeJobs: jobList.length,
+        totalUsers: userCount,
+      });
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   return (

@@ -1,7 +1,9 @@
 package com.eaa.recruit.service;
 
+import com.eaa.recruit.dto.auth.ChangePasswordRequest;
 import com.eaa.recruit.dto.auth.ForgotPasswordRequest;
 import com.eaa.recruit.dto.auth.ResetPasswordRequest;
+import com.eaa.recruit.exception.UnauthorizedException;
 import com.eaa.recruit.entity.User;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.otp.OtpService;
@@ -49,5 +51,20 @@ public class PasswordResetService {
         userRepository.save(user);
 
         auditLogService.log("USER", user.getId(), null, "PASSWORD_RESET", user, null);
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("Account not found"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new UnauthorizedException("Current password is incorrect");
+        }
+
+        user.changePassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        auditLogService.log("USER", user.getId(), null, "PASSWORD_CHANGED", user, null);
     }
 }

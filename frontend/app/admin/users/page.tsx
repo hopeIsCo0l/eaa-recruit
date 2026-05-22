@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
-type Role = "ADMIN" | "RECRUITER" | "CANDIDATE";
+type Role = "ADMIN" | "RECRUITER" | "CANDIDATE" | "SUPER_ADMIN";
 type Status = "ACTIVE" | "SUSPENDED";
 
 interface User {
@@ -14,21 +15,20 @@ interface User {
   lastLogin: string;
 }
 
-const MOCK_USERS: User[] = [
-  { id: "U001", name: "Amanuel Tesfaye",  email: "a.tesfaye@eaa.et",   role: "ADMIN",     status: "ACTIVE",    lastLogin: "2026-04-25 14:32" },
-  { id: "U002", name: "Hana Girma",       email: "h.girma@eaa.et",     role: "RECRUITER", status: "ACTIVE",    lastLogin: "2026-04-25 09:11" },
-  { id: "U003", name: "Dawit Mulugeta",   email: "d.mulugeta@eaa.et",  role: "RECRUITER", status: "ACTIVE",    lastLogin: "2026-04-24 16:47" },
-  { id: "U004", name: "Selam Bekele",     email: "s.bekele@eaa.et",    role: "RECRUITER", status: "SUSPENDED", lastLogin: "2026-04-10 08:02" },
-  { id: "U005", name: "Yonas Haile",      email: "y.haile@gmail.com",  role: "CANDIDATE", status: "ACTIVE",    lastLogin: "2026-04-25 11:55" },
-  { id: "U006", name: "Meron Alemu",      email: "m.alemu@gmail.com",  role: "CANDIDATE", status: "ACTIVE",    lastLogin: "2026-04-25 13:20" },
-  { id: "U007", name: "Bereket Tadesse",  email: "b.tadesse@gmail.com",role: "CANDIDATE", status: "ACTIVE",    lastLogin: "2026-04-23 07:39" },
-  { id: "U008", name: "Tigist Woldeyohannes", email: "t.wolde@gmail.com", role: "CANDIDATE", status: "SUSPENDED", lastLogin: "2026-03-30 10:00" },
-];
+type BackendUser = {
+  id: number;
+  fullName: string;
+  email: string;
+  role: Role;
+  active: boolean;
+  lastLoginAt?: string | null;
+};
 
 const ROLE_COLORS: Record<Role, { bg: string; text: string }> = {
-  ADMIN:     { bg: "rgba(255,214,0,0.1)",   text: "var(--c-accent)" },
-  RECRUITER: { bg: "rgba(255,107,53,0.1)",  text: "var(--c-warn)" },
-  CANDIDATE: { bg: "rgba(245,245,240,0.06)", text: "var(--c-text-sub)" },
+  ADMIN:       { bg: "rgba(255,214,0,0.1)",    text: "var(--c-accent)" },
+  SUPER_ADMIN: { bg: "rgba(255,214,0,0.15)",   text: "var(--c-accent)" },
+  RECRUITER:   { bg: "rgba(255,107,53,0.1)",   text: "var(--c-warn)" },
+  CANDIDATE:   { bg: "rgba(245,245,240,0.06)", text: "var(--c-text-sub)" },
 };
 
 function SectionLabel({ children }: { children: string }) {
@@ -97,15 +97,33 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [users, setUsers] = useState<User[]>([]);
   const [roleFilter, setRoleFilter] = useState<Role | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  const counts = {
-    ADMIN:     users.filter((u) => u.role === "ADMIN").length,
-    RECRUITER: users.filter((u) => u.role === "RECRUITER").length,
-    CANDIDATE: users.filter((u) => u.role === "CANDIDATE").length,
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await apiFetch<BackendUser[]>("/api/v1/admin/users");
+      if (cancelled || error || !data) return;
+      setUsers(data.map((u) => ({
+        id: String(u.id),
+        name: u.fullName,
+        email: u.email,
+        role: u.role,
+        status: u.active ? "ACTIVE" : "SUSPENDED",
+        lastLogin: u.lastLoginAt ?? "—",
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const counts: Record<Role, number> = {
+    ADMIN:       users.filter((u) => u.role === "ADMIN").length + users.filter((u) => u.role === "SUPER_ADMIN").length,
+    SUPER_ADMIN: users.filter((u) => u.role === "SUPER_ADMIN").length,
+    RECRUITER:   users.filter((u) => u.role === "RECRUITER").length,
+    CANDIDATE:   users.filter((u) => u.role === "CANDIDATE").length,
   };
 
   const filtered = users.filter((u) => {

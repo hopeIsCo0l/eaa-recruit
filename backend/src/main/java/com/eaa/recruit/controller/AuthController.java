@@ -2,6 +2,7 @@ package com.eaa.recruit.controller;
 
 import com.eaa.recruit.dto.ApiResponse;
 import com.eaa.recruit.dto.auth.CandidateRegistrationRequest;
+import com.eaa.recruit.dto.auth.ChangePasswordRequest;
 import com.eaa.recruit.dto.auth.ForgotPasswordRequest;
 import com.eaa.recruit.dto.auth.LoginRequest;
 import com.eaa.recruit.dto.auth.LoginResponse;
@@ -11,6 +12,7 @@ import com.eaa.recruit.dto.auth.ResendOtpRequest;
 import com.eaa.recruit.dto.auth.ResetPasswordRequest;
 import com.eaa.recruit.ratelimit.RateLimitProperties;
 import com.eaa.recruit.ratelimit.RateLimitService;
+import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.service.CandidateRegistrationService;
 import com.eaa.recruit.service.LoginService;
 import com.eaa.recruit.service.PasswordResetService;
@@ -18,6 +20,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -137,6 +140,20 @@ public class AuthController {
 
         passwordResetService.sendResetOtp(request);
         return ResponseEntity.ok(ApiResponse.success("If that email exists, a reset code has been sent"));
+    }
+
+    /**
+     * POST /api/v1/auth/change-password
+     *
+     * Logged-in user changes their own password. Verifies current password first.
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+
+        passwordResetService.changePassword(principal.id(), request);
+        return ResponseEntity.ok(ApiResponse.success("Password changed successfully"));
     }
 
     /**
