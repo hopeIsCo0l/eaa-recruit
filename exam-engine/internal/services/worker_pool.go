@@ -10,7 +10,9 @@ type GradingTask struct {
 	CandidateID string
 	JobID       string
 	QuestionID  string
+	IdealAnswer string
 	Answer      string
+	MaxMarks    float64
 	Done        chan<- float64 // worker sends score here when finished
 }
 
