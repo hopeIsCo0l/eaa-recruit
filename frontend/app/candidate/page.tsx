@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { apiFetch } from "@/lib/api";
 
 const TooltipStyle: React.CSSProperties = {
   background: "var(--c-bg)", border: "1px solid var(--c-border)", borderRadius: 0,
@@ -45,13 +46,26 @@ export default function CandidateDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/dashboard/candidate")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.applications) setApplications(data.applications);
-        if (data.actions)      setActions(data.actions);
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await apiFetch<Array<{
+        id: number; jobTitle: string; department?: string;
+        submittedAt: string; status: string;
+      }>>("/api/v1/applications/me");
+      if (cancelled) return;
+      if (!error && data) {
+        setApplications(data.map((a) => ({
+          id: String(a.id),
+          role: a.jobTitle,
+          department: a.department ?? "—",
+          appliedDate: new Date(a.submittedAt).toLocaleDateString("en-GB"),
+          status: a.status,
+          steps: [],
+        })));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   return (

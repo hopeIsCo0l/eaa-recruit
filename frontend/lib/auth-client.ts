@@ -1,11 +1,6 @@
 "use client";
 
-type ApiEnvelope<T> = {
-  status: "success" | "error";
-  message?: string;
-  data?: T;
-  errors?: Array<{ field?: string; message: string }>;
-};
+import { apiFetch } from "./api";
 
 type LoginResponse = {
   token: string;
@@ -56,29 +51,13 @@ function readSession(): Session | null {
   }
 }
 
-async function unwrap<T>(res: Response): Promise<{ data: T | null; error: { message: string } | null }> {
-  let body: ApiEnvelope<T> | null = null;
-  try { body = (await res.json()) as ApiEnvelope<T>; } catch {}
-
-  if (!res.ok || !body || body.status !== "success" || body.data == null) {
-    const message =
-      body?.message ??
-      body?.errors?.[0]?.message ??
-      (res.status === 401 ? "Invalid credentials" : `Request failed (${res.status})`);
-    return { data: null, error: { message } };
-  }
-  return { data: body.data, error: null };
-}
-
 export const authClient = {
   signIn: {
     email: async (args: { email: string; password: string }) => {
-      const res = await fetch("/api/v1/auth/login", {
+      const { data, error } = await apiFetch<LoginResponse>("/api/v1/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(args),
-      });
-      const { data, error } = await unwrap<LoginResponse>(res);
+      }, { auth: false, redirectOn401: false });
       if (error || !data) return { data: null, error };
 
       const session: Session = {
@@ -97,27 +76,37 @@ export const authClient = {
 
   signUp: {
     email: async (args: { email: string; password: string; name: string; phone?: string }) => {
-      const res = await fetch("/api/v1/auth/register/candidate", {
+      return apiFetch<{ userId: number; email: string }>("/api/v1/auth/register/candidate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: args.name,
           email: args.email,
           password: args.password,
           phone: args.phone ?? "",
         }),
-      });
-      return unwrap<{ userId: number; email: string }>(res);
+      }, { auth: false, redirectOn401: false });
     },
   },
 
   verifyOtp: async (args: { email: string; otp: string }) => {
-    const res = await fetch("/api/v1/auth/verify-otp", {
+    return apiFetch<void>("/api/v1/auth/verify-otp", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    }, { auth: false, redirectOn401: false });
+  },
+
+  resendOtp: async (args: { email: string }) => {
+    return apiFetch<void>("/api/v1/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify(args),
+    }, { auth: false, redirectOn401: false });
+  },
+
+  changePassword: async (args: { currentPassword: string; newPassword: string }) => {
+    return apiFetch<void>("/api/v1/auth/change-password", {
+      method: "POST",
       body: JSON.stringify(args),
     });
-    return unwrap<void>(res);
   },
 
   signOut: async () => {

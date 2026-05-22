@@ -5,6 +5,7 @@ import {
   FunnelChart, Funnel, LabelList, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Cell,
 } from "recharts";
+import { apiFetch } from "@/lib/api";
 
 type FunnelItem = { name: string; value: number; fill: string };
 type ActiveJob  = { id: string; title: string; dept: string; applied: number; screened: number; ttf: number };
@@ -69,14 +70,31 @@ export default function RecruiterDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/dashboard/recruiter")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.kpis)       setKpis(data.kpis);
-        if (data.funnelData) setFunnelData(data.funnelData);
-        if (data.activeJobs) setActiveJobs(data.activeJobs);
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await apiFetch<{
+        content?: Array<{ id: number; title: string; department?: string;
+                          applied: number; screened: number; ttf?: number }>;
+      }>("/api/v1/recruiters/dashboard");
+      if (cancelled) return;
+      if (!error && data?.content) {
+        setActiveJobs(data.content.map((j) => ({
+          id: String(j.id),
+          title: j.title,
+          dept: j.department ?? "—",
+          applied: j.applied,
+          screened: j.screened,
+          ttf: j.ttf ?? 0,
+        })));
+        setKpis({
+          activeCycles: data.content.length,
+          totalApplicants: data.content.reduce((s, j) => s + j.applied, 0),
+          avgTtfDays: 0,
+        });
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const screenRate = funnelData[0]?.value > 0

@@ -1,45 +1,47 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
+import { XaiDownloadButton } from "@/components/XaiDownloadButton";
 
-const applications = [
-  {
-    id: "APP-001",
-    role: "Senior Pilot (B787)",
-    department: "Flight Operations",
-    appliedDate: "12 Apr 2025",
-    lastUpdate: "13 Apr 2025",
-    status: "SHORTLISTED",
-    overallScore: 94,
-    currentStep: "Exam Invited",
-    steps: [
-      { label: "CV RECEIVED",   done: true  },
-      { label: "AI PROCESSING", done: true  },
-      { label: "SHORTLISTED",   done: true  },
-      { label: "EXAM INVITED",  done: false },
-      { label: "INTERVIEW",     done: false },
-      { label: "DECISION",      done: false },
-    ],
-  },
-  {
-    id: "APP-002",
-    role: "Avionics Technician",
-    department: "Maintenance & Engineering",
-    appliedDate: "20 Apr 2025",
-    lastUpdate: "20 Apr 2025",
-    status: "PROCESSING",
-    overallScore: 0,
-    currentStep: "AI Processing",
-    steps: [
-      { label: "CV RECEIVED",   done: true  },
-      { label: "AI PROCESSING", done: false },
-      { label: "SHORTLISTED",   done: false },
-      { label: "EXAM INVITED",  done: false },
-      { label: "INTERVIEW",     done: false },
-      { label: "DECISION",      done: false },
-    ],
-  },
-];
+type Application = {
+  id: string;
+  role: string;
+  department: string;
+  appliedDate: string;
+  lastUpdate: string;
+  status: string;
+  overallScore: number;
+  currentStep: string;
+  hasReport: boolean;
+  steps: { label: string; done: boolean }[];
+};
+
+type BackendApplication = {
+  id: number;
+  jobTitle: string;
+  department?: string;
+  submittedAt: string;
+  updatedAt?: string;
+  status: string;
+  finalScore?: number;
+  cvRelevanceScore?: number;
+  xaiReportUrl?: string | null;
+};
+
+function stepsFor(status: string) {
+  const done = (target: string, ...prereqs: string[]) =>
+    prereqs.includes(status) || status === target;
+  return [
+    { label: "CV RECEIVED",   done: true },
+    { label: "AI PROCESSING", done: status !== "PENDING_AI" },
+    { label: "SHORTLISTED",   done: ["SHORTLISTED", "INTERVIEW_SCHEDULED", "SELECTED", "REJECTED", "WAITLISTED"].includes(status) },
+    { label: "EXAM INVITED",  done: ["EXAM_AUTHORIZED", "EXAM_COMPLETED", "SHORTLISTED", "INTERVIEW_SCHEDULED", "SELECTED", "REJECTED", "WAITLISTED"].includes(status) },
+    { label: "INTERVIEW",     done: ["INTERVIEW_SCHEDULED", "SELECTED", "REJECTED", "WAITLISTED"].includes(status) },
+    { label: "DECISION",      done: ["SELECTED", "REJECTED", "WAITLISTED"].includes(status) },
+  ];
+}
 
 function statusColor(status: string) {
   if (status === "SHORTLISTED") return "var(--c-accent)";
@@ -48,6 +50,29 @@ function statusColor(status: string) {
 }
 
 export default function ApplicationsPage() {
+  const [applications, setApplications] = useState<Application[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await apiFetch<BackendApplication[]>("/api/v1/applications/me");
+      if (cancelled || error || !data) return;
+      setApplications(data.map((a) => ({
+        id: String(a.id),
+        role: a.jobTitle,
+        department: a.department ?? "—",
+        appliedDate: new Date(a.submittedAt).toLocaleDateString("en-GB"),
+        lastUpdate: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString("en-GB") : "—",
+        status: a.status,
+        overallScore: a.finalScore ?? Math.round((a.cvRelevanceScore ?? 0) * 100),
+        currentStep: a.status,
+        hasReport: !!a.xaiReportUrl && !a.xaiReportUrl.startsWith("pending:") && !a.xaiReportUrl.startsWith("failed:"),
+        steps: stepsFor(a.status),
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="p-6 md:p-8 max-w-[1200px] mx-auto flex flex-col gap-8">
       {/* Header */}
@@ -169,6 +194,12 @@ export default function ApplicationsPage() {
                 )}
               </span>
             </div>
+
+            {app.hasReport && (
+              <div className="pt-2">
+                <XaiDownloadButton applicationId={app.id} />
+              </div>
+            )}
           </div>
         ))}
       </div>

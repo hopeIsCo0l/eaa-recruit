@@ -1,9 +1,11 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function VerifyOtpForm() {
   const router = useRouter();
@@ -12,6 +14,14 @@ function VerifyOtpForm() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,6 +31,7 @@ function VerifyOtpForm() {
     }
     setLoading(true);
     setError(null);
+    setInfo(null);
     const { error: otpError } = await authClient.verifyOtp({ email, otp: otp.trim() });
     setLoading(false);
     if (otpError) {
@@ -28,6 +39,22 @@ function VerifyOtpForm() {
       return;
     }
     router.push("/login");
+  }
+
+  async function onResend() {
+    if (!email || cooldown > 0) return;
+    setError(null);
+    setInfo(null);
+    const { error: resendError } = await authClient.resendOtp({ email });
+    if (resendError) {
+      setError(resendError.message);
+      if (resendError.status === 429 && resendError.retryAfter) {
+        setCooldown(resendError.retryAfter);
+      }
+      return;
+    }
+    setInfo("A NEW CODE HAS BEEN SENT");
+    setCooldown(RESEND_COOLDOWN_SECONDS);
   }
 
   return (
@@ -49,6 +76,12 @@ function VerifyOtpForm() {
           <div className="flex items-center gap-3 px-4 py-3 bg-red-500/10 border border-red-500/40">
             <div className="w-[5px] h-[5px] bg-red-400 shrink-0" />
             <span className="font-ibm-mono text-[10px] text-red-400 tracking-[1px]">{error}</span>
+          </div>
+        )}
+        {info && !error && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-[var(--c-accent)]/10 border border-[var(--c-accent)]/40">
+            <div className="w-[5px] h-[5px] bg-[var(--c-accent)] shrink-0" />
+            <span className="font-ibm-mono text-[10px] text-[var(--c-accent)] tracking-[1px]">{info}</span>
           </div>
         )}
 
@@ -75,6 +108,15 @@ function VerifyOtpForm() {
           >
             {loading && <div className="w-[16px] h-[16px] border-2 border-[var(--c-text)]/30 border-t-[var(--c-text)] rounded-full animate-spin" />}
             <span className="font-grotesk text-[13px] font-bold text-[var(--c-text)] tracking-[2px]">VERIFY</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={!email || cooldown > 0}
+            className="font-ibm-mono text-[10px] text-[var(--c-text-dim)] hover:text-[var(--c-accent)] disabled:opacity-40 disabled:hover:text-[var(--c-text-dim)] tracking-[1px] transition-colors text-center"
+          >
+            {cooldown > 0 ? `RESEND IN ${cooldown}S` : "DIDN'T GET A CODE? RESEND"}
           </button>
         </form>
 

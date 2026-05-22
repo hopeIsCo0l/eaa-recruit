@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SidebarUserPill } from "@/components/SidebarUserPill";
 
 const navItems = [
   {
@@ -162,25 +163,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Sidebar footer */}
         <div className="px-4 pb-4 border-t border-[var(--c-border-soft)] pt-4 shrink-0">
-          {!collapsed && (
-            <div className="flex flex-col gap-[6px]">
-              <div className="flex items-center gap-[8px]">
-                <div className="w-[26px] h-[26px] bg-[var(--c-bg-muted)] border border-[var(--c-border)] flex items-center justify-center shrink-0">
-                  <span className="font-ibm-mono text-[9px] text-[var(--c-text-sub)]">AD</span>
-                </div>
-                <div className="flex flex-col leading-none min-w-0">
-                  <span className="font-ibm-mono text-[10px] text-[var(--c-text)] tracking-[1px] truncate">ADMIN USER</span>
-                  <span className="font-ibm-mono text-[8px] text-[var(--c-text-dim)] tracking-[0.5px]">admin@eaa.et</span>
-                </div>
-              </div>
-              <Link
-                href="/"
-                className="font-ibm-mono text-[9px] text-[var(--c-text-dim)] hover:text-[var(--c-accent)] tracking-[1px] transition-colors mt-1"
-              >
-                BACK TO SITE /
-              </Link>
-            </div>
-          )}
+          <SidebarUserPill collapsed={collapsed} />
         </div>
       </aside>
 
