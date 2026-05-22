@@ -1,11 +1,15 @@
 package middleware
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,9 +19,12 @@ const (
 	JobIDKey       = "jobID"
 )
 
-// JWTAuth extracts candidateId and jobId from a Bearer JWT issued by Spring Boot.
-// TODO: verify signature with Spring Boot's public key before production deploy.
+// JWTAuth verifies the HS256 signature of a Bearer token using the shared
+// Spring secret (JWT_SECRET env), then extracts candidateId + jobId claims.
+// jobId may also be supplied as a ?jobId= query parameter for tokens issued
+// by Spring's default login flow which does not embed the exam batch ID.
 func JWTAuth() gin.HandlerFunc {
+	secret := []byte(os.Getenv("JWT_SECRET"))
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -28,39 +35,106 @@ func JWTAuth() gin.HandlerFunc {
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
-		candidateID, jobID, err := parseToken(token)
+
+		claims, err := verifyAndParse(token, secret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"status":  "error",
-				"message": "invalid token",
+				"message": "invalid token: " + err.Error(),
 			})
 			return
 		}
+
+		candidateID := claims.candidateID()
+		jobID := claims.JobID
+		if jobID == "" {
+			jobID = c.Query("jobId")
+		}
+		if candidateID == "" || jobID == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status":  "error",
+				"message": "missing candidate or job context",
+			})
+			return
+		}
+
 		c.Set(CandidateIDKey, candidateID)
 		c.Set(JobIDKey, jobID)
 		c.Next()
 	}
 }
 
-// parseToken base64-decodes the JWT payload and extracts sub (candidateId) and jobId claims.
-func parseToken(token string) (candidateID, jobID string, err error) {
+type tokenClaims struct {
+	Sub    string `json:"sub"`
+	UserID any    `json:"userId"`
+	JobID  string `json:"jobId"`
+	Exp    int64  `json:"exp"`
+}
+
+func (c tokenClaims) candidateID() string {
+	switch v := c.UserID.(type) {
+	case string:
+		if v != "" {
+			return v
+		}
+	case float64:
+		return fmt.Sprintf("%d", int64(v))
+	}
+	return c.Sub
+}
+
+type tokenHeader struct {
+	Alg string `json:"alg"`
+	Typ string `json:"typ"`
+}
+
+// verifyAndParse checks the HS256 signature and exp claim, then returns the claims.
+func verifyAndParse(token string, secret []byte) (tokenClaims, error) {
+	var claims tokenClaims
+
+	if len(secret) == 0 {
+		return claims, fmt.Errorf("server JWT secret not configured")
+	}
+
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return "", "", fmt.Errorf("invalid JWT format")
+		return claims, fmt.Errorf("not a JWT")
 	}
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+
+	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return "", "", fmt.Errorf("decode payload: %w", err)
+		return claims, fmt.Errorf("bad header b64: %w", err)
 	}
-	var claims struct {
-		Sub   string `json:"sub"`
-		JobID string `json:"jobId"`
+	var header tokenHeader
+	if err := json.Unmarshal(headerBytes, &header); err != nil {
+		return claims, fmt.Errorf("bad header json: %w", err)
 	}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return "", "", fmt.Errorf("unmarshal claims: %w", err)
+	if header.Alg != "HS256" {
+		return claims, fmt.Errorf("unsupported alg: %s", header.Alg)
 	}
-	if claims.Sub == "" || claims.JobID == "" {
-		return "", "", fmt.Errorf("missing sub or jobId claim")
+
+	signingInput := parts[0] + "." + parts[1]
+	mac := hmac.New(sha256.New, secret)
+	mac.Write([]byte(signingInput))
+	expected := mac.Sum(nil)
+
+	provided, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		return claims, fmt.Errorf("bad signature b64: %w", err)
 	}
-	return claims.Sub, claims.JobID, nil
+	if !hmac.Equal(expected, provided) {
+		return claims, fmt.Errorf("signature mismatch")
+	}
+
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return claims, fmt.Errorf("bad payload b64: %w", err)
+	}
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		return claims, fmt.Errorf("bad payload json: %w", err)
+	}
+	if claims.Exp > 0 && time.Now().Unix() >= claims.Exp {
+		return claims, fmt.Errorf("token expired")
+	}
+	return claims, nil
 }

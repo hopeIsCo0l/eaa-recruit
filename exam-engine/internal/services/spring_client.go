@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -73,7 +74,8 @@ func (c *SpringClient) PublishExamCompleted(session *domain.ExamSession) {
 			_ = resp.Body.Close()
 		}
 
-		backoff := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+		base := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+		backoff := base + time.Duration(rand.Int63n(int64(base)/2))
 		log.Printf("exam-completed publish attempt %d/%d failed (err=%v): retry in %v",
 			attempt+1, maxRetries, err, backoff)
 		time.Sleep(backoff)
@@ -82,10 +84,16 @@ func (c *SpringClient) PublishExamCompleted(session *domain.ExamSession) {
 		session.CandidateID, maxRetries)
 }
 
-// fetchQuestions calls Spring Boot to retrieve cached questions for a given exam.
+// FetchQuestions calls Spring Boot to retrieve the question set for an exam.
 func (c *SpringClient) FetchQuestions(examID string) ([]domain.Question, error) {
-	url := fmt.Sprintf("%s/api/v1/exams/%s/questions", c.baseURL, examID)
-	resp, err := c.httpClient.Get(url)
+	url := fmt.Sprintf("%s/api/v1/internal/exams/%s/questions", c.baseURL, examID)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Internal-Api-Key", c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

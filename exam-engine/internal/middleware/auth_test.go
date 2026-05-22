@@ -1,6 +1,8 @@
 package middleware_test
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,15 +15,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func makeToken(sub, jobID string) string {
+const testSecret = "test-secret-key-that-is-long-enough"
+
+func signed(payload map[string]any, secret string) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
-	payload, _ := json.Marshal(map[string]string{"sub": sub, "jobId": jobID})
-	encoded := base64.RawURLEncoding.EncodeToString(payload)
-	sig := base64.RawURLEncoding.EncodeToString([]byte("sig"))
+	body, _ := json.Marshal(payload)
+	encoded := base64.RawURLEncoding.EncodeToString(body)
+	signingInput := header + "." + encoded
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(signingInput))
+	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 	return fmt.Sprintf("%s.%s.%s", header, encoded, sig)
 }
 
 func TestJWTAuth_ValidToken(t *testing.T) {
+	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
@@ -30,7 +38,7 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"candidateID": cid, "jobID": jid})
 	})
 
-	token := makeToken("user-123", "job-456")
+	token := signed(map[string]any{"sub": "user-123", "jobId": "job-456"}, testSecret)
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
@@ -44,7 +52,49 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 	}
 }
 
+func TestJWTAuth_BadSignature(t *testing.T) {
+	t.Setenv("JWT_SECRET", testSecret)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{})
+	})
+
+	token := signed(map[string]any{"sub": "u", "jobId": "j"}, "wrong-secret")
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 for bad signature, got %d", w.Code)
+	}
+}
+
+func TestJWTAuth_JobIdFromQuery(t *testing.T) {
+	t.Setenv("JWT_SECRET", testSecret)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"jobID": c.GetString(middleware.JobIDKey)})
+	})
+
+	token := signed(map[string]any{"sub": "user-1"}, testSecret) // no jobId in claims
+	req := httptest.NewRequest(http.MethodGet, "/test?jobId=job-99", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "job-99") {
+		t.Error("expected jobId from query string")
+	}
+}
+
 func TestJWTAuth_MissingHeader(t *testing.T) {
+	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
@@ -61,6 +111,7 @@ func TestJWTAuth_MissingHeader(t *testing.T) {
 }
 
 func TestJWTAuth_InvalidFormat(t *testing.T) {
+	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
@@ -78,18 +129,14 @@ func TestJWTAuth_InvalidFormat(t *testing.T) {
 }
 
 func TestJWTAuth_MissingClaims(t *testing.T) {
+	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 	})
 
-	// Token with no sub or jobId
-	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256"}`))
-	payload := base64.RawURLEncoding.EncodeToString([]byte(`{}`))
-	sig := base64.RawURLEncoding.EncodeToString([]byte("sig"))
-	token := fmt.Sprintf("%s.%s.%s", header, payload, sig)
-
+	token := signed(map[string]any{}, testSecret)
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()

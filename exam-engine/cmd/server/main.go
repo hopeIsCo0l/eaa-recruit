@@ -43,8 +43,9 @@ func main() {
 	pool.Start(func(task services.GradingTask) {
 		req := services.AIGradingRequest{
 			QuestionID:      task.QuestionID,
+			IdealAnswer:     task.IdealAnswer,
 			CandidateAnswer: task.Answer,
-			JobID:           task.JobID,
+			MaxMarks:        task.MaxMarks,
 		}
 		score := aiClient.GradeWithRetry(context.Background(), req)
 		task.Done <- score
@@ -57,11 +58,14 @@ func main() {
 
 	// ── Router ───────────────────────────────────────────────────────────────────
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(gin.Logger(), gin.Recovery(),
+		middleware.CORS(cfg.CorsAllowedOrigins),
+		handlers.MetricsCounter())
 
 	// Unauthenticated
 	router.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"message": "pong"}) })
 	router.GET("/health", healthHandler.Health) // FR-60 — no auth
+	router.GET("/metrics", handlers.Metrics)
 
 	// Internal — service-to-service, secured with X-Internal-Api-Key header
 	router.POST("/api/v1/batches/ready", batchHandler.BatchReady)

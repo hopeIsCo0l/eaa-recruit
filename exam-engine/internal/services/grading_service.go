@@ -87,7 +87,9 @@ func (g *GradingService) dispatchShortAnswerGrading(session *domain.ExamSession,
 		CandidateID: session.CandidateID,
 		JobID:       session.JobID,
 		QuestionID:  q.ID,
+		IdealAnswer: q.CorrectAnswer,
 		Answer:      answer,
+		MaxMarks:    q.Marks,
 		Done:        done,
 	}
 	g.pool.Submit(task)

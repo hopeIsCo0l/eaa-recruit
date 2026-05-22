@@ -6,13 +6,21 @@ import com.eaa.recruit.dto.application.AiScoreCallbackRequest;
 import com.eaa.recruit.dto.internal.ExamCompletedRequest;
 import com.eaa.recruit.dto.internal.ExamScoreCallbackRequest;
 import com.eaa.recruit.entity.Application;
+import com.eaa.recruit.entity.Question;
 import com.eaa.recruit.exception.ResourceNotFoundException;
 import com.eaa.recruit.exception.UnauthorizedException;
 import com.eaa.recruit.repository.ApplicationRepository;
+import com.eaa.recruit.repository.QuestionRepository;
 import com.eaa.recruit.service.ApplicationService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Internal endpoints called by other services (e.g., Python AI service).
@@ -22,16 +30,66 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/internal")
 public class InternalController {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
+
     private final ApplicationService       applicationService;
     private final ApplicationRepository    applicationRepository;
+    private final QuestionRepository       questionRepository;
     private final InternalApiKeyProperties apiKeyProperties;
 
     public InternalController(ApplicationService applicationService,
                                ApplicationRepository applicationRepository,
+                               QuestionRepository questionRepository,
                                InternalApiKeyProperties apiKeyProperties) {
         this.applicationService    = applicationService;
         this.applicationRepository = applicationRepository;
+        this.questionRepository    = questionRepository;
         this.apiKeyProperties      = apiKeyProperties;
+    }
+
+    /**
+     * GET /api/v1/internal/exams/{examId}/questions
+     * Called by the Go exam engine on EXAM_BATCH_READY to fetch the question set.
+     * Returns IDs as strings + correctAnswer stringified for direct equality on the engine.
+     */
+    @GetMapping("/exams/{examId}/questions")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> fetchExamQuestions(
+            @PathVariable("examId") Long examId,
+            @RequestHeader("X-Internal-Api-Key") String apiKey) {
+
+        validateApiKey(apiKey);
+
+        List<Map<String, Object>> payload = questionRepository
+                .findByExamIdOrderByDisplayOrderAsc(examId)
+                .stream()
+                .map(q -> toEnginePayload(examId, q))
+                .toList();
+
+        return ResponseEntity.ok(ApiResponse.success(payload));
+    }
+
+    private Map<String, Object> toEnginePayload(Long examId, Question q) {
+        List<String> options = parseOptions(q.getOptions());
+        String correct = q.getCorrectAnswer() == null ? "" : String.valueOf(q.getCorrectAnswer());
+        return Map.of(
+                "id",            String.valueOf(q.getId()),
+                "examId",        String.valueOf(examId),
+                "text",          q.getQuestionText(),
+                "type",          q.getType().name(),
+                "options",       options,
+                "correctAnswer", correct,
+                "marks",         q.getMarks() == null ? 0 : q.getMarks()
+        );
+    }
+
+    private List<String> parseOptions(String json) {
+        if (json == null || json.isBlank()) return Collections.emptyList();
+        try {
+            return OBJECT_MAPPER.readValue(json, STRING_LIST);
+        } catch (Exception ex) {
+            return Collections.emptyList();
+        }
     }
 
     /**

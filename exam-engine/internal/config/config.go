@@ -2,45 +2,53 @@ package config
 
 import (
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 )
 
 type Config struct {
-	Port              string
-	RedisAddr         string
-	RedisPassword     string
-	RedisPoolSize     int
-	RedisMinIdle      int
-	SpringBaseURL     string
-	InternalApiKey    string
-	WorkerPoolSize    int
-	RateLimitRPS      int
-	HeartbeatInterval time.Duration
-	HeartbeatMisses   int
-	AIGradingURL      string
-	AIGradingTimeout  time.Duration
-	AIGradingRetries  int
-	AIGradingProtocol string // "rest" or "grpc"
+	Port               string
+	RedisAddr          string
+	RedisPassword      string
+	RedisPoolSize      int
+	RedisMinIdle       int
+	SpringBaseURL      string
+	InternalApiKey     string
+	WorkerPoolSize     int
+	RateLimitRPS       int
+	HeartbeatInterval  time.Duration
+	HeartbeatMisses    int
+	AIGradingURL       string
+	AIGradingTimeout   time.Duration
+	AIGradingRetries   int
+	AIGradingProtocol  string // "rest" or "grpc"
+	CorsAllowedOrigins string
 }
 
 func Load() *Config {
+	// 0 = autosize to NumCPU*2 (sensible for I/O-bound AI grading calls)
+	pool := getEnvInt("WORKER_POOL_SIZE", 0)
+	if pool <= 0 {
+		pool = runtime.NumCPU() * 2
+	}
 	return &Config{
-		Port:              getEnv("PORT", "8090"),
-		RedisAddr:         getEnv("REDIS_ADDR", "localhost:6379"),
-		RedisPassword:     getEnv("REDIS_PASSWORD", ""),
-		RedisPoolSize:     getEnvInt("REDIS_POOL_SIZE", 20),
-		RedisMinIdle:      getEnvInt("REDIS_MIN_IDLE", 5),
-		SpringBaseURL:     getEnv("SPRING_BASE_URL", "http://localhost:8080"),
-		InternalApiKey:    getEnv("INTERNAL_API_KEY", "change-me-internal-key"),
-		WorkerPoolSize:    getEnvInt("WORKER_POOL_SIZE", 10),
-		RateLimitRPS:      getEnvInt("RATE_LIMIT_RPS", 10),
-		HeartbeatInterval: getEnvDuration("HEARTBEAT_INTERVAL", 10*time.Second),
-		HeartbeatMisses:   getEnvInt("HEARTBEAT_MISSES", 3),
-		AIGradingURL:      getEnv("AI_GRADING_URL", "http://localhost:8000"),
-		AIGradingTimeout:  getEnvDuration("AI_GRADING_TIMEOUT", 10*time.Second),
-		AIGradingRetries:  getEnvInt("AI_GRADING_RETRIES", 3),
-		AIGradingProtocol: getEnv("AI_GRADING_PROTOCOL", "rest"),
+		Port:               getEnv("PORT", "8090"),
+		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6379"),
+		RedisPassword:      getEnv("REDIS_PASSWORD", ""),
+		RedisPoolSize:      getEnvInt("REDIS_POOL_SIZE", 20),
+		RedisMinIdle:       getEnvInt("REDIS_MIN_IDLE", 5),
+		SpringBaseURL:      getEnv("SPRING_BASE_URL", "http://localhost:8080"),
+		InternalApiKey:     getEnv("INTERNAL_API_KEY", "change-me-internal-key"),
+		WorkerPoolSize:     pool,
+		RateLimitRPS:       getEnvInt("RATE_LIMIT_RPS", 10),
+		HeartbeatInterval:  getEnvDuration("HEARTBEAT_INTERVAL", 10*time.Second),
+		HeartbeatMisses:    getEnvInt("HEARTBEAT_MISSES", 3),
+		AIGradingURL:       getEnv("AI_GRADING_URL", "http://localhost:8000"),
+		AIGradingTimeout:   getEnvDuration("AI_GRADING_TIMEOUT", 10*time.Second),
+		AIGradingRetries:   getEnvInt("AI_GRADING_RETRIES", 3),
+		AIGradingProtocol:  getEnv("AI_GRADING_PROTOCOL", "rest"),
+		CorsAllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"),
 	}
 }
 
