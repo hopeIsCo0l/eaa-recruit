@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -20,11 +19,11 @@ const (
 )
 
 // JWTAuth verifies the HS256 signature of a Bearer token using the shared
-// Spring secret (JWT_SECRET env), then extracts candidateId + jobId claims.
-// jobId may also be supplied as a ?jobId= query parameter for tokens issued
-// by Spring's default login flow which does not embed the exam batch ID.
-func JWTAuth() gin.HandlerFunc {
-	secret := []byte(os.Getenv("JWT_SECRET"))
+// Spring secret, then extracts candidateId + jobId claims. jobId may also be
+// supplied as a ?jobId= query parameter for tokens issued by Spring's default
+// login flow which does not embed the exam batch ID.
+func JWTAuth(jwtSecret string) gin.HandlerFunc {
+	secret := []byte(jwtSecret)
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {

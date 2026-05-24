@@ -49,30 +49,30 @@ func NewAIGradingClient(cfg *config.Config) *AIGradingClient {
 func (a *AIGradingClient) Grade(ctx context.Context, req AIGradingRequest) (float64, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("marshal grading request: %w", err)
 	}
 
 	url := a.cfg.AIGradingURL + "/api/v1/grade-answer"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("build grading request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Internal-Api-Key", a.cfg.InternalApiKey)
 
 	resp, err := a.client.Do(httpReq)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("call ai-service %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("AI service returned %d", resp.StatusCode)
+		return 0, fmt.Errorf("ai-service %s returned status %d", url, resp.StatusCode)
 	}
 
 	var result AIGradingResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("decode grading response: %w", err)
 	}
 	return result.AwardedMarks, nil
 }

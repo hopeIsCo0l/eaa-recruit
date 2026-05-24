@@ -32,7 +32,7 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+	router.GET("/test", middleware.JWTAuth(testSecret), func(c *gin.Context) {
 		cid := c.GetString(middleware.CandidateIDKey)
 		jid := c.GetString(middleware.JobIDKey)
 		c.JSON(http.StatusOK, gin.H{"candidateID": cid, "jobID": jid})
@@ -56,7 +56,7 @@ func TestJWTAuth_BadSignature(t *testing.T) {
 	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+	router.GET("/test", middleware.JWTAuth(testSecret), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 	})
 
@@ -75,7 +75,7 @@ func TestJWTAuth_JobIdFromQuery(t *testing.T) {
 	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+	router.GET("/test", middleware.JWTAuth(testSecret), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"jobID": c.GetString(middleware.JobIDKey)})
 	})
 
@@ -97,7 +97,7 @@ func TestJWTAuth_MissingHeader(t *testing.T) {
 	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+	router.GET("/test", middleware.JWTAuth(testSecret), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 	})
 
@@ -114,7 +114,7 @@ func TestJWTAuth_InvalidFormat(t *testing.T) {
 	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+	router.GET("/test", middleware.JWTAuth(testSecret), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 	})
 
@@ -132,7 +132,7 @@ func TestJWTAuth_MissingClaims(t *testing.T) {
 	t.Setenv("JWT_SECRET", testSecret)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/test", middleware.JWTAuth(), func(c *gin.Context) {
+	router.GET("/test", middleware.JWTAuth(testSecret), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 	})
 
