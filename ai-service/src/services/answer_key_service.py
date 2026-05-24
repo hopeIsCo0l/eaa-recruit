@@ -18,6 +18,6 @@ def store_answer_key(question_id: str, ideal_answer: str) -> List[float]:
 def get_answer_key_embedding(question_id: str, ideal_answer: str) -> List[float]:
     """Return cached embedding, or generate and cache if missing."""
     cached = vector_cache.get(f"answerkey:{question_id}")
-    if cached:
+    if cached is not None:
         return cached
     return store_answer_key(question_id, ideal_answer)

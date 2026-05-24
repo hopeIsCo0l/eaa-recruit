@@ -7,7 +7,7 @@ router = APIRouter(prefix="/rank", dependencies=[Depends(verify_internal_api_key
 
 
 class CandidateInput(BaseModel):
-    candidateId: str
+    candidateId: str = Field(min_length=1, max_length=64)
     cvScore: float = Field(ge=0, le=100)
     examScore: float = Field(ge=0, le=100)
     hardFilterPassed: bool
@@ -22,7 +22,7 @@ class CandidateResult(BaseModel):
 
 
 class BatchRankRequest(BaseModel):
-    candidates: list[CandidateInput]
+    candidates: list[CandidateInput] = Field(min_length=1, max_length=10_000)
 
 
 class BatchRankResponse(BaseModel):

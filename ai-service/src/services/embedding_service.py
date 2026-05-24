@@ -43,12 +43,25 @@ def embed(text: str) -> List[float]:
 def embed_batch(texts: List[str]) -> List[List[float]]:
     from src.services import vector_cache
 
-    results: List[List[float] | None] = [vector_cache.get(t) for t in texts]
-    miss_indices = [i for i, r in enumerate(results) if r is None]
-    if miss_indices:
-        miss_texts = [texts[i] for i in miss_indices]
-        vectors = get_model().encode(miss_texts, convert_to_numpy=True).tolist()
-        for i, vec in zip(miss_indices, vectors):
-            vector_cache.put(texts[i], vec)
-            results[i] = vec
-    return results  # type: ignore[return-value]
+    if not texts:
+        return []
+
+    cached = vector_cache.get_many(texts)
+
+    # Dedupe miss texts so the model encodes each unique text once.
+    miss_unique: List[str] = []
+    seen: set[str] = set()
+    for t in texts:
+        if cached.get(t) is None and t not in seen:
+            seen.add(t)
+            miss_unique.append(t)
+
+    if miss_unique:
+        vectors = get_model().encode(
+            miss_unique, convert_to_numpy=True, batch_size=32, show_progress_bar=False
+        ).tolist()
+        vector_cache.put_many(list(zip(miss_unique, vectors)))
+        for t, v in zip(miss_unique, vectors):
+            cached[t] = v
+
+    return [cached[t] for t in texts]  # type: ignore[return-value]

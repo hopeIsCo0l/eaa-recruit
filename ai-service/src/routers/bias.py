@@ -15,14 +15,15 @@ router = APIRouter(prefix="/bias", dependencies=[Depends(verify_internal_api_key
 
 
 class CandidateRecord(BaseModel):
-    candidateId: str
-    cohort: str = Field(description="University name or geographic indicator")
+    candidateId: str = Field(min_length=1, max_length=64)
+    cohort: str = Field(min_length=1, max_length=128,
+                        description="University name or geographic indicator")
     cvScore: float = Field(ge=0, le=100)
 
 
 class AnalyseRequest(BaseModel):
-    jobId: str
-    candidates: list[CandidateRecord] = Field(min_length=1)
+    jobId: str = Field(min_length=1, max_length=64)
+    candidates: list[CandidateRecord] = Field(min_length=1, max_length=10_000)
 
 
 @router.post("/analyse")

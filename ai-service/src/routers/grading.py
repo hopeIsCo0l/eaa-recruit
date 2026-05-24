@@ -17,11 +17,11 @@ router = APIRouter(prefix="/api/v1", dependencies=[Depends(verify_internal_api_k
 
 
 class GradeAnswerRequest(BaseModel):
-    questionId:       str
-    idealAnswer:      str
-    candidateAnswer:  str
-    maxMarks:         float = Field(gt=0)
-    requiredKeywords: list[str] | None = None
+    questionId:       str = Field(min_length=1, max_length=64)
+    idealAnswer:      str = Field(min_length=1, max_length=10_000)
+    candidateAnswer:  str = Field(max_length=20_000)
+    maxMarks:         float = Field(gt=0, le=100)
+    requiredKeywords: list[str] | None = Field(default=None, max_length=50)
 
 
 class GradeAnswerResponse(BaseModel):
@@ -33,7 +33,7 @@ class GradeAnswerResponse(BaseModel):
 
 
 class GradeBatchRequest(BaseModel):
-    answers: list[GradeAnswerRequest] = Field(min_length=1)
+    answers: list[GradeAnswerRequest] = Field(min_length=1, max_length=500)
 
 
 class GradeBatchResponse(BaseModel):
