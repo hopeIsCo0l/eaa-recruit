@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.utils.auth import verify_internal_api_key
 
@@ -20,11 +20,11 @@ router = APIRouter(prefix="/api/v1")
 
 
 class ScoreCvRequest(BaseModel):
-    applicationId:  int
-    candidateId:    int
-    jobId:          int
-    cvStoragePath:  str
-    jobDescription: str | None = None
+    applicationId:  int = Field(gt=0)
+    candidateId:    int = Field(gt=0)
+    jobId:          int = Field(gt=0)
+    cvStoragePath:  str = Field(min_length=1, max_length=1024)
+    jobDescription: str | None = Field(default=None, max_length=20_000)
 
 
 def _process_cv(req: ScoreCvRequest) -> None:

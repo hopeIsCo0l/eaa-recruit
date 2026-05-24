@@ -24,17 +24,17 @@ router = APIRouter(prefix="/api/v1/xai", dependencies=[Depends(verify_internal_a
 
 
 class XaiReportRequest(BaseModel):
-    applicationId:    int
-    candidateName:    str
-    jobTitle:         str
-    jobDescription:   str
+    applicationId:    int = Field(gt=0)
+    candidateName:    str = Field(min_length=1, max_length=256)
+    jobTitle:         str = Field(min_length=1, max_length=256)
+    jobDescription:   str = Field(min_length=1, max_length=20_000)
     cvText:           str | None = Field(default=None, max_length=50_000,
                                           description="Optional. Falls back to Redis cv-text:{appId}.")
     cvScore:          float = Field(ge=0, le=100)
     examScore:        float = Field(ge=0, le=100)
     hardFilterPassed: bool
     finalScore:       float = Field(ge=0, le=100)
-    recruiterNotes:   str | None = None
+    recruiterNotes:   str | None = Field(default=None, max_length=5_000)
     limeSamples:      int = Field(default=300, ge=50, le=2000)
 
 

@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 from lime.lime_text import LimeTextExplainer
 
-from src.services.embedding_service import embed
+from src.services.embedding_service import embed, embed_batch
 
 logger = logging.getLogger(__name__)
 
@@ -37,20 +37,27 @@ def explain_cv(cv_text: str, job_description: str, num_samples: int = 300) -> At
     jd_norm = np.linalg.norm(jd_vec)
 
     def predict_fn(texts: List[str]) -> np.ndarray:
-        scores = []
-        for text in texts:
-            if not text.strip():
-                scores.append([0.0])
-                continue
-            cv_vec = np.array(embed(text), dtype=np.float32)
-            cv_norm = np.linalg.norm(cv_vec)
-            if cv_norm == 0 or jd_norm == 0:
-                scores.append([0.0])
-            else:
-                cosine = float(np.dot(cv_vec, jd_vec) / (cv_norm * jd_norm))
-                scaled = (cosine + 1) / 2 * 100
-                scores.append([scaled])
-        return np.array(scores)
+        # LIME hands us a batch of perturbed texts. Encode them in one model
+        # pass via embed_batch instead of N sequential calls — order of magnitude
+        # faster for the default num_samples=300.
+        n = len(texts)
+        scores = np.zeros((n, 1), dtype=np.float32)
+        non_empty_idx = [i for i, t in enumerate(texts) if t.strip()]
+        if not non_empty_idx or jd_norm == 0:
+            return scores
+
+        batch_texts = [texts[i] for i in non_empty_idx]
+        vectors = embed_batch(batch_texts)
+        mat = np.asarray(vectors, dtype=np.float32)
+        norms = np.linalg.norm(mat, axis=1)
+        # Guard zero-norm rows
+        safe = norms > 0
+        cosines = np.zeros(len(batch_texts), dtype=np.float32)
+        cosines[safe] = (mat[safe] @ jd_vec) / (norms[safe] * jd_norm)
+        scaled = (cosines + 1.0) / 2.0 * 100.0
+        for k, i in enumerate(non_empty_idx):
+            scores[i, 0] = scaled[k]
+        return scores
 
     explainer = _get_explainer()
     explanation = explainer.explain_instance(
