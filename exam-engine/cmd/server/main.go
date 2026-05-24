@@ -19,6 +19,9 @@ import (
 
 func main() {
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("invalid configuration: %v", err)
+	}
 
 	// ── Infrastructure ──────────────────────────────────────────────────────────
 	rdb := pkgredis.NewClient(cfg)
@@ -71,7 +74,7 @@ func main() {
 	router.POST("/api/v1/batches/ready", batchHandler.BatchReady)
 
 	// Exam routes — JWT required
-	exam := router.Group("/exam", middleware.JWTAuth())
+	exam := router.Group("/exam", middleware.JWTAuth(cfg.JWTSecret))
 	{
 		exam.GET("/start", middleware.RateLimiter(rdb, cfg), examHandler.StartExam)             // FR-51
 		exam.POST("/submit-answer", middleware.RateLimiter(rdb, cfg), examHandler.SubmitAnswer) // FR-52

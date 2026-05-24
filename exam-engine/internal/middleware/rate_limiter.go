@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -22,7 +21,7 @@ func RateLimiter(rdb *redis.Client, cfg *config.Config) gin.HandlerFunc {
 			key = fmt.Sprintf("ratelimit:ip:%s", c.ClientIP())
 		}
 
-		ctx := context.Background()
+		ctx := c.Request.Context()
 		pipe := rdb.Pipeline()
 		incr := pipe.Incr(ctx, key)
 		pipe.Expire(ctx, key, time.Second)
