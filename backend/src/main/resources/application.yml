@@ -69,9 +69,11 @@ spring:
       mail:
         smtp:
           auth: true
+          ssl:
+            enable: ${MAIL_SSL_ENABLE:false}
           starttls:
-            enable: true
-            required: true
+            enable: ${MAIL_STARTTLS_ENABLE:true}
+            required: ${MAIL_STARTTLS_REQUIRED:true}
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
@@ -115,6 +117,7 @@ app:
   mail:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:${MAIL_USER:}}
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
   events:
     ai-service-url:  ${AI_SERVICE_URL:http://localhost:8000}
     exam-engine-url: ${EXAM_ENGINE_URL:http://localhost:8090}
