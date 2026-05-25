@@ -11,7 +11,8 @@ function VerifyOtpForm() {
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get("email") ?? "";
-  const [otp, setOtp] = useState("");
+  const prefilledOtp = (params.get("otp") ?? "").replace(/\D/g, "").slice(0, 6);
+  const [otp, setOtp] = useState(prefilledOtp);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -22,6 +23,12 @@ function VerifyOtpForm() {
     const id = setTimeout(() => setCooldown((c) => c - 1), 1000);
     return () => clearTimeout(id);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (prefilledOtp.length === 6 && email) {
+      setInfo("CODE PREFILLED FROM EMAIL LINK — TAP VERIFY");
+    }
+  }, [prefilledOtp, email]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
