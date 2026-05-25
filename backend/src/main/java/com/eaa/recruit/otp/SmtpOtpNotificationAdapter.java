@@ -11,6 +11,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 @Component
@@ -22,13 +23,16 @@ public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
     private final JavaMailSender mailSender;
     private final String         from;
     private final int            ttlSeconds;
+    private final String         frontendUrl;
 
     public SmtpOtpNotificationAdapter(JavaMailSender mailSender,
                                       @Value("${app.mail.from:${spring.mail.username}}") String from,
-                                      @Value("${otp.ttl-seconds:300}") int ttlSeconds) {
-        this.mailSender = mailSender;
-        this.from       = from;
-        this.ttlSeconds = ttlSeconds;
+                                      @Value("${otp.ttl-seconds:300}") int ttlSeconds,
+                                      @Value("${app.frontend-url:http://localhost:3000}") String frontendUrl) {
+        this.mailSender  = mailSender;
+        this.from        = from;
+        this.ttlSeconds  = ttlSeconds;
+        this.frontendUrl = frontendUrl.replaceAll("/+$", "");
     }
 
     @Override
@@ -40,10 +44,13 @@ public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
             MimeMessageHelper helper = new MimeMessageHelper(
                     mime, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
 
+            String verifyUrl = buildVerifyUrl(recipient, otp);
+
             helper.setFrom(from);
             helper.setTo(recipient);
             helper.setSubject("EAA Recruit // Verification code " + otp);
-            helper.setText(plainTextBody(otp, expiryMinutes), htmlBody(otp, expiryMinutes));
+            helper.setText(plainTextBody(otp, expiryMinutes, verifyUrl),
+                           htmlBody(otp, expiryMinutes, verifyUrl));
 
             mailSender.send(mime);
             log.info("OTP email dispatched to '{}'", recipient);
@@ -53,14 +60,24 @@ public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
         }
     }
 
+    // ─── Build the one-click verify URL (frontend auto-fills the OTP form) ──
+    private String buildVerifyUrl(String recipient, String otp) {
+        String email = URLEncoder.encode(recipient, StandardCharsets.UTF_8);
+        String code  = URLEncoder.encode(otp,       StandardCharsets.UTF_8);
+        return frontendUrl + "/verify-otp?email=" + email + "&otp=" + code;
+    }
+
     // ─── Plain-text fallback (for clients that block HTML) ──────────────────
-    private String plainTextBody(String otp, int expiryMinutes) {
+    private String plainTextBody(String otp, int expiryMinutes, String verifyUrl) {
         return """
                 EAA RECRUIT // VERIFICATION CODE
 
                 Your verification code is:
 
                     %s
+
+                Or open this link to verify in one click:
+                %s
 
                 This code expires in %d minute%s. Enter it on the verification
                 page to activate your account.
@@ -70,11 +87,11 @@ public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
                 ──
                 Compliant with Proclamation No. 1329/2023
                 Data stays in Ethiopia
-                """.formatted(otp, expiryMinutes, expiryMinutes == 1 ? "" : "s");
+                """.formatted(otp, verifyUrl, expiryMinutes, expiryMinutes == 1 ? "" : "s");
     }
 
     // ─── HTML body — mirrors the dark IBM-Plex-Mono frontend aesthetic ──────
-    private String htmlBody(String otp, int expiryMinutes) {
+    private String htmlBody(String otp, int expiryMinutes, String verifyUrl) {
         String digits = renderDigits(otp);
         String expiryLabel = "EXPIRES IN " + expiryMinutes + " MINUTE" + (expiryMinutes == 1 ? "" : "S");
 
@@ -153,12 +170,24 @@ public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
 
               <!-- OTP block -->
               <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0"
-                     style="background-color:#0A0A0A;border:1px solid #2D2D2D;margin-bottom:24px;">
+                     style="background-color:#0A0A0A;border:1px solid #2D2D2D;margin-bottom:20px;">
                 <tr>
                   <td align="center" style="padding:32px 16px 12px 16px;">
                     %s
                   </td>
                 </tr>
+
+                <!-- Tap-to-select plain code row (works in every email client — no JS) -->
+                <tr>
+                  <td align="center" style="padding:4px 16px 16px 16px;">
+                    <p style="margin:0 0 8px 0;font-family:'IBM Plex Mono',monospace;font-size:8px;color:#666666;letter-spacing:1.5px;">
+                      TAP THE CODE BELOW TO SELECT, THEN COPY
+                    </p>
+                    <a href="%s"
+                       style="display:inline-block;padding:8px 14px;background-color:#1A1A1A;border:1px dashed #2D2D2D;text-decoration:none;font-family:'IBM Plex Mono','Menlo','Consolas',monospace;font-weight:700;font-size:18px;color:#F5F5F0;letter-spacing:6px;user-select:all;-webkit-user-select:all;-moz-user-select:all;">%s</a>
+                  </td>
+                </tr>
+
                 <tr>
                   <td align="center" style="padding:0 16px 24px 16px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
@@ -177,9 +206,21 @@ public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
                 </tr>
               </table>
 
+              <!-- One-click CTA (skips copy entirely — opens verify page with code pre-filled) -->
+              <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="%s"
+                       style="display:block;padding:16px 24px;background-color:#FFD600;text-decoration:none;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;color:#0A0A0A;letter-spacing:2px;text-align:center;">
+                      VERIFY IN ONE CLICK /
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
               <!-- Body copy -->
               <p style="margin:0 0 16px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.7;color:#AAAAAA;letter-spacing:0.3px;">
-                Open the verification page in the browser tab where you started registration and paste the code above.
+                Tap the button above to verify automatically, or paste the code on the verification page if you started registration in another browser.
               </p>
               <p style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.7;color:#666666;letter-spacing:0.3px;">
                 Didn't request this? You can safely ignore this email — no account will be created without the code.
@@ -225,7 +266,13 @@ public class SmtpOtpNotificationAdapter implements OtpNotificationPort {
   </table>
 </body>
 </html>
-                """.formatted(otp, expiryMinutes, expiryMinutes == 1 ? "" : "s", digits, expiryLabel);
+                """.formatted(
+                        otp,
+                        expiryMinutes, expiryMinutes == 1 ? "" : "s",
+                        digits,
+                        verifyUrl, otp,
+                        expiryLabel,
+                        verifyUrl);
     }
 
     // ─── Render the OTP digits as individual boxed cells (mono-pixel feel) ──
