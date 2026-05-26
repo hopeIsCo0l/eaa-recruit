@@ -2,7 +2,7 @@ package com.eaa.recruit.otp;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("!prod")
-@ConditionalOnExpression("'${MAIL_ENABLED:false}' != 'true' && !T(org.springframework.util.StringUtils).hasText('${MAIL_USER:}')")
+@ConditionalOnProperty(name = "app.mail.enabled", havingValue = "false", matchIfMissing = true)
 public class MockOtpNotificationAdapter implements OtpNotificationPort {
 
     private static final Logger log = LoggerFactory.getLogger(MockOtpNotificationAdapter.class);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 type Role = "ADMIN" | "RECRUITER" | "CANDIDATE" | "SUPER_ADMIN";
@@ -8,6 +8,7 @@ type Status = "ACTIVE" | "SUSPENDED";
 
 interface User {
   id: string;
+  numericId: number;
   name: string;
   email: string;
   role: Role;
@@ -40,52 +41,129 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-function AddUserModal({ onClose }: { onClose: () => void }) {
+/**
+ * Create-recruiter modal. Hits POST /api/v1/admin/users/recruiter.
+ *
+ * Backend (CreateRecruiterRequest) requires fullName(2-100), email, and
+ * temporaryPassword(8-72). Backend only exposes recruiter creation today —
+ * ADMIN accounts are seeded, no API to create them via UI.
+ */
+function AddUserModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (fullName.trim().length < 2) { setError("FULL NAME MUST BE AT LEAST 2 CHARACTERS"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("EMAIL FORMAT INVALID"); return; }
+    if (password.length < 8) { setError("PASSWORD MUST BE AT LEAST 8 CHARACTERS"); return; }
+
+    setSubmitting(true);
+    const { error: apiError } = await apiFetch<{ userId: number; email: string }>(
+      "/api/v1/admin/users/recruiter",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          temporaryPassword: password,
+        }),
+      },
+    );
+    setSubmitting(false);
+
+    if (apiError) {
+      setError(apiError.message.toUpperCase());
+      return;
+    }
+    onCreated();
+    onClose();
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
       <div className="w-full max-w-[480px] mx-4 bg-[var(--c-bg-elev)] border border-[var(--c-border)]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--c-border-soft)]">
           <div className="flex items-center gap-3">
             <div className="w-[3px] h-[14px] bg-[var(--c-accent)]" />
-            <span className="font-ibm-mono text-[10px] text-[var(--c-text-sub)] tracking-[2px]">ADD INTERNAL USER</span>
+            <span className="font-ibm-mono text-[10px] text-[var(--c-text-sub)] tracking-[2px]">ADD RECRUITER</span>
           </div>
-          <button onClick={onClose} className="text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors font-ibm-mono text-[17px]">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors font-ibm-mono text-[17px] disabled:opacity-40"
+          >
             ×
           </button>
         </div>
-        <form className="flex flex-col gap-5 px-6 py-6" onSubmit={(e) => { e.preventDefault(); onClose(); }}>
-          {[
-            { label: "FULL NAME", placeholder: "e.g. Amanuel Tesfaye", type: "text" },
-            { label: "EMAIL ADDRESS", placeholder: "name@eaa.et", type: "email" },
-            { label: "TEMPORARY PASSWORD", placeholder: "Min. 12 characters", type: "password" },
-          ].map(({ label, placeholder, type }) => (
-            <div key={label} className="flex flex-col gap-[6px]">
-              <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">{label}</label>
-              <input
-                type={type}
-                placeholder={placeholder}
-                className="w-full h-[40px] bg-[var(--c-bg)] border border-[var(--c-border)] px-3 font-ibm-mono text-[12px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
-              />
-            </div>
-          ))}
+        <form className="flex flex-col gap-5 px-6 py-6" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-[6px]">
+            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">FULL NAME</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="e.g. Amanuel Tesfaye"
+              className="w-full h-[40px] bg-[var(--c-bg)] border border-[var(--c-border)] px-3 font-ibm-mono text-[12px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-[6px]">
+            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">EMAIL ADDRESS</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@eaa.et"
+              className="w-full h-[40px] bg-[var(--c-bg)] border border-[var(--c-border)] px-3 font-ibm-mono text-[12px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
+            />
+          </div>
+          <div className="flex flex-col gap-[6px]">
+            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">TEMPORARY PASSWORD</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Min. 8 characters"
+              className="w-full h-[40px] bg-[var(--c-bg)] border border-[var(--c-border)] px-3 font-ibm-mono text-[12px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
+            />
+          </div>
           <div className="flex flex-col gap-[6px]">
             <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">ASSIGN ROLE</label>
-            <select className="w-full h-[40px] bg-[var(--c-bg)] border border-[var(--c-border)] px-3 font-ibm-mono text-[12px] text-[var(--c-text)] focus:outline-none focus:border-[var(--c-accent)] transition-colors appearance-none">
-              <option value="RECRUITER">RECRUITER</option>
-              <option value="ADMIN">ADMIN</option>
-            </select>
+            <div className="h-[40px] bg-[var(--c-bg)] border border-[var(--c-border)] px-3 flex items-center font-ibm-mono text-[12px] text-[var(--c-text-muted)]">
+              RECRUITER&nbsp;<span className="text-[var(--c-text-faint)]">// only role supported by API today</span>
+            </div>
           </div>
+
+          {error && (
+            <div className="px-3 py-2 border border-[var(--c-warn)]/40 bg-[var(--c-warn)]/5">
+              <span className="font-ibm-mono text-[10px] text-[var(--c-warn)] tracking-[1px]">{error}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 h-[40px] bg-[var(--c-accent)] font-ibm-mono text-[10px] font-bold text-[var(--c-text)] tracking-[2px] hover:bg-[var(--c-accent-hover)] transition-colors"
+              disabled={submitting}
+              className="flex-1 h-[40px] bg-[var(--c-accent)] font-ibm-mono text-[10px] font-bold text-[var(--c-text)] tracking-[2px] hover:bg-[var(--c-accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              CREATE ACCOUNT
+              {submitting ? "CREATING…" : "CREATE ACCOUNT"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="h-[40px] px-5 border border-[var(--c-border)] font-ibm-mono text-[10px] text-[var(--c-text-muted)] tracking-[1.5px] hover:text-[var(--c-text)] hover:border-[var(--c-text-muted)] transition-colors"
+              disabled={submitting}
+              className="h-[40px] px-5 border border-[var(--c-border)] font-ibm-mono text-[10px] text-[var(--c-text-muted)] tracking-[1.5px] hover:text-[var(--c-text)] hover:border-[var(--c-text-muted)] transition-colors disabled:opacity-40"
             >
               CANCEL
             </button>
@@ -101,23 +179,26 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<Role | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await apiFetch<BackendUser[]>("/api/v1/admin/users");
-      if (cancelled || error || !data) return;
-      setUsers(data.map((u) => ({
-        id: String(u.id),
-        name: u.fullName,
-        email: u.email,
-        role: u.role,
-        status: u.active ? "ACTIVE" : "SUSPENDED",
-        lastLogin: u.lastLoginAt ?? "—",
-      })));
-    })();
-    return () => { cancelled = true; };
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await apiFetch<BackendUser[]>("/api/v1/admin/users");
+    setLoading(false);
+    if (error || !data) return;
+    setUsers(data.map((u) => ({
+      id: String(u.id),
+      numericId: u.id,
+      name: u.fullName,
+      email: u.email,
+      role: u.role,
+      status: u.active ? "ACTIVE" : "SUSPENDED",
+      lastLogin: u.lastLoginAt ?? "—",
+    })));
   }, []);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const counts: Record<Role, number> = {
     ADMIN:       users.filter((u) => u.role === "ADMIN").length + users.filter((u) => u.role === "SUPER_ADMIN").length,
@@ -132,15 +213,37 @@ export default function UsersPage() {
     return matchRole && matchSearch;
   });
 
-  const toggleStatus = (id: string) => {
+  // Optimistic status toggle backed by PATCH /admin/users/{id}/status.
+  // Backend enforces guards (self-deactivation, last-super-admin) and returns
+  // a BusinessException message — surface it and roll back on failure.
+  async function toggleStatus(u: User) {
+    setActionError(null);
+    const next = u.status === "ACTIVE" ? false : true;
+    // Optimistic update
     setUsers((prev) =>
-      prev.map((u) => u.id === id ? { ...u, status: u.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" } : u)
+      prev.map((x) => x.id === u.id ? { ...x, status: next ? "ACTIVE" : "SUSPENDED" } : x)
     );
-  };
+    const { error } = await apiFetch<void>(
+      `/api/v1/admin/users/${u.numericId}/status`,
+      { method: "PATCH", body: JSON.stringify({ active: next }) },
+    );
+    if (error) {
+      // Roll back
+      setUsers((prev) =>
+        prev.map((x) => x.id === u.id ? { ...x, status: u.status } : x)
+      );
+      setActionError(`${u.email}: ${error.message}`);
+    }
+  }
 
   return (
     <div className="p-6 md:p-8 max-w-[1400px] mx-auto">
-      {showModal && <AddUserModal onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <AddUserModal
+          onClose={() => setShowModal(false)}
+          onCreated={loadUsers}
+        />
+      )}
 
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
@@ -154,9 +257,21 @@ export default function UsersPage() {
           onClick={() => setShowModal(true)}
           className="flex items-center gap-[8px] h-[40px] px-5 bg-[var(--c-accent)] font-ibm-mono text-[10px] font-bold text-[var(--c-text)] tracking-[2px] hover:bg-[var(--c-accent-hover)] transition-colors self-start"
         >
-          + ADD USER
+          + ADD RECRUITER
         </button>
       </div>
+
+      {actionError && (
+        <div className="mb-5 px-4 py-3 border border-[var(--c-warn)]/40 bg-[var(--c-warn)]/5 flex items-center justify-between">
+          <span className="font-ibm-mono text-[10px] text-[var(--c-warn)] tracking-[1px]">{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="font-ibm-mono text-[10px] text-[var(--c-text-muted)] hover:text-[var(--c-text)] tracking-[1px]"
+          >
+            DISMISS
+          </button>
+        </div>
+      )}
 
       {/* Counters */}
       <div className="grid grid-cols-3 gap-[1px] bg-[var(--c-border-soft)] mb-8">
@@ -208,7 +323,7 @@ export default function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((user, i) => (
+            {filtered.map((user) => (
               <tr
                 key={user.id}
                 className="border-b border-[var(--c-bg-muted)] hover:bg-[var(--c-bg)] transition-colors"
@@ -240,29 +355,13 @@ export default function UsersPage() {
                 </td>
                 <td className="px-4 py-3 font-ibm-mono text-[9px] text-[var(--c-text-dim)]">{user.lastLogin}</td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-[8px]">
-                    <button
-                      className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] hover:text-[var(--c-accent)] tracking-[1px] transition-colors"
-                    >
-                      RESET PWD
-                    </button>
-                    <span className="text-[var(--c-border-soft)]">|</span>
-                    <button
-                      onClick={() => toggleStatus(user.id)}
-                      className="font-ibm-mono text-[9px] tracking-[1px] transition-colors"
-                      style={{ color: user.status === "ACTIVE" ? "var(--c-warn)" : "var(--c-accent)" }}
-                    >
-                      {user.status === "ACTIVE" ? "SUSPEND" : "ACTIVATE"}
-                    </button>
-                    {user.role !== "ADMIN" && (
-                      <>
-                        <span className="text-[var(--c-border-soft)]">|</span>
-                        <button className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] hover:text-[var(--c-text)] tracking-[1px] transition-colors">
-                          PROMOTE
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  <button
+                    onClick={() => toggleStatus(user)}
+                    className="font-ibm-mono text-[9px] tracking-[1px] transition-colors hover:opacity-70"
+                    style={{ color: user.status === "ACTIVE" ? "var(--c-warn)" : "var(--c-accent)" }}
+                  >
+                    {user.status === "ACTIVE" ? "SUSPEND" : "ACTIVATE"}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -270,7 +369,9 @@ export default function UsersPage() {
         </table>
         {filtered.length === 0 && (
           <div className="flex items-center justify-center py-16">
-            <span className="font-ibm-mono text-[11px] text-[var(--c-text-faint)] tracking-[1.5px]">NO USERS MATCH THIS FILTER</span>
+            <span className="font-ibm-mono text-[11px] text-[var(--c-text-faint)] tracking-[1.5px]">
+              {loading ? "LOADING…" : "NO USERS MATCH THIS FILTER"}
+            </span>
           </div>
         )}
       </div>

@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.vscode
+coverage
+dist
+*.log
+*.tsbuildinfo
+npm-debug.log*

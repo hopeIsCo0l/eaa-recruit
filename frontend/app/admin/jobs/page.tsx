@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
-type JobStatus = "OPEN" | "CLOSED" | "DRAFT";
+type JobStatus = "OPEN" | "CLOSED" | "DRAFT" | "EXAM_SCHEDULED" | "ARCHIVED";
 
 interface Job {
   id: string;
@@ -29,9 +29,11 @@ type BackendJob = {
 };
 
 const STATUS_STYLES: Record<JobStatus, { bg: string; text: string; dot: string }> = {
-  OPEN:   { bg: "rgba(255,214,0,0.08)", text: "var(--c-accent)", dot: "var(--c-accent)" },
-  CLOSED: { bg: "rgba(245,245,240,0.04)", text: "var(--c-text-dim)",  dot: "var(--c-text-faint)"   },
-  DRAFT:  { bg: "rgba(255,107,53,0.08)", text: "var(--c-warn)", dot: "var(--c-warn)" },
+  OPEN:           { bg: "rgba(255,214,0,0.08)",  text: "var(--c-accent)",   dot: "var(--c-accent)"   },
+  CLOSED:         { bg: "rgba(245,245,240,0.04)",text: "var(--c-text-dim)", dot: "var(--c-text-faint)"},
+  DRAFT:          { bg: "rgba(255,107,53,0.08)", text: "var(--c-warn)",     dot: "var(--c-warn)"     },
+  EXAM_SCHEDULED: { bg: "rgba(100,180,255,0.08)",text: "#64B4FF",           dot: "#64B4FF"           },
+  ARCHIVED:       { bg: "rgba(245,245,240,0.03)",text: "var(--c-text-faint)",dot: "var(--c-text-faint)"},
 };
 
 function SectionLabel({ children }: { children: string }) {
@@ -68,27 +70,44 @@ export default function JobsPage() {
   const [search, setSearch]             = useState("");
   const [expanded, setExpanded]         = useState<string | null>(null);
   const [jobs, setJobs]                 = useState<Job[]>([]);
+  const [actionError, setActionError]   = useState<string | null>(null);
+  const [archivingId, setArchivingId]   = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await apiFetch<BackendJob[]>("/api/v1/jobs");
-      if (cancelled || error || !data) return;
-      setJobs(data.map((j) => ({
-        id: String(j.id),
-        title: j.title,
-        department: j.department ?? "—",
-        status: j.status,
-        posted: j.postedAt ?? "—",
-        deadline: j.applicationDeadline ?? "—",
-        applicants: j.applicantCount ?? 0,
-        shortlisted: 0,
-        examReady: 0,
-        cutoff: 0,
-      })));
-    })();
-    return () => { cancelled = true; };
+  const loadJobs = useCallback(async () => {
+    const { data, error } = await apiFetch<BackendJob[]>("/api/v1/jobs");
+    if (error || !data) return;
+    setJobs(data.map((j) => ({
+      id: String(j.id),
+      title: j.title,
+      department: j.department ?? "—",
+      status: j.status,
+      posted: j.postedAt ?? "—",
+      deadline: j.applicationDeadline ?? "—",
+      applicants: j.applicantCount ?? 0,
+      shortlisted: 0,
+      examReady: 0,
+      cutoff: 0,
+    })));
   }, []);
+
+  useEffect(() => { loadJobs(); }, [loadJobs]);
+
+  // POST /admin/jobs/{id}/archive — backend allows only CLOSED or
+  // EXAM_SCHEDULED jobs. Button is gated below to match.
+  async function archiveJob(job: Job) {
+    setActionError(null);
+    setArchivingId(job.id);
+    const { error } = await apiFetch<void>(
+      `/api/v1/admin/jobs/${job.id}/archive`,
+      { method: "POST" },
+    );
+    setArchivingId(null);
+    if (error) {
+      setActionError(`${job.title}: ${error.message}`);
+      return;
+    }
+    await loadJobs();
+  }
 
   const filtered = jobs.filter((j) => {
     const matchStatus = statusFilter === "ALL" || j.status === statusFilter;
@@ -113,13 +132,22 @@ export default function JobsPage() {
             Active Vacancies
           </h1>
           <p className="font-ibm-mono text-[11px] text-[var(--c-text-muted)] tracking-[0.5px]">
-            Monitor all postings, funnel metrics, and cutoff scores
+            Monitor all postings, funnel metrics, and archive completed roles
           </p>
         </div>
-        <button className="flex items-center gap-[8px] h-[40px] px-5 bg-[var(--c-accent)] font-ibm-mono text-[10px] font-bold text-[var(--c-text)] tracking-[2px] hover:bg-[var(--c-accent-hover)] transition-colors self-start">
-          + NEW POSTING
-        </button>
       </div>
+
+      {actionError && (
+        <div className="mb-5 px-4 py-3 border border-[var(--c-warn)]/40 bg-[var(--c-warn)]/5 flex items-center justify-between">
+          <span className="font-ibm-mono text-[10px] text-[var(--c-warn)] tracking-[1px]">{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="font-ibm-mono text-[10px] text-[var(--c-text-muted)] hover:text-[var(--c-text)] tracking-[1px]"
+          >
+            DISMISS
+          </button>
+        </div>
+      )}
 
       {/* Summary counters */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-[1px] bg-[var(--c-border-soft)] mb-8">
@@ -147,8 +175,8 @@ export default function JobsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 h-[38px] bg-[var(--c-bg-elev)] border border-[var(--c-border-soft)] px-4 font-ibm-mono text-[11px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
         />
-        <div className="flex gap-[2px]">
-          {(["ALL", "OPEN", "CLOSED", "DRAFT"] as const).map((s) => (
+        <div className="flex gap-[2px] flex-wrap">
+          {(["ALL", "OPEN", "CLOSED", "EXAM_SCHEDULED", "ARCHIVED", "DRAFT"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -235,17 +263,20 @@ export default function JobsPage() {
                     <p className="font-ibm-mono text-[9px] text-[var(--c-text-dim)] tracking-[1.5px] mb-2">APPLICATION FUNNEL</p>
                     <FunnelBar applicants={job.applicants} shortlisted={job.shortlisted} examReady={job.examReady} />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button className="h-[34px] px-4 bg-[var(--c-accent)] font-ibm-mono text-[9px] font-bold text-[var(--c-text)] tracking-[1.5px] hover:bg-[var(--c-accent-hover)] transition-colors">
-                      VIEW CANDIDATES
-                    </button>
-                    <button className="h-[34px] px-4 border border-[var(--c-border)] font-ibm-mono text-[9px] text-[var(--c-text-muted)] hover:text-[var(--c-text)] hover:border-[var(--c-text-muted)] tracking-[1.5px] transition-colors">
-                      EDIT POSTING
-                    </button>
-                    {job.status === "OPEN" && (
-                      <button className="h-[34px] px-4 border border-[#FF5050]/30 font-ibm-mono text-[9px] text-[#FF5050] hover:border-[#FF5050] tracking-[1.5px] transition-colors">
-                        CLOSE ROLE
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {(job.status === "CLOSED" || job.status === "EXAM_SCHEDULED") && (
+                      <button
+                        onClick={() => archiveJob(job)}
+                        disabled={archivingId === job.id}
+                        className="h-[34px] px-4 border border-[#FF5050]/40 font-ibm-mono text-[9px] font-bold text-[#FF5050] hover:bg-[#FF5050]/10 hover:border-[#FF5050] tracking-[1.5px] transition-colors disabled:opacity-50"
+                      >
+                        {archivingId === job.id ? "ARCHIVING…" : "ARCHIVE"}
                       </button>
+                    )}
+                    {job.status === "ARCHIVED" && (
+                      <span className="font-ibm-mono text-[9px] text-[var(--c-text-faint)] tracking-[1.5px]">
+                        // ALREADY ARCHIVED
+                      </span>
                     )}
                   </div>
                 </div>
