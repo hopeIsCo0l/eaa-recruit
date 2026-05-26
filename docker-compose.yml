@@ -105,6 +105,7 @@ services:
       SPRING_BASE_URL: http://backend:8080
       AI_GRADING_URL: http://ai-service:8000
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me-min-256-bits-long-secret-key-12345}
     depends_on:
       redis:
         condition: service_healthy

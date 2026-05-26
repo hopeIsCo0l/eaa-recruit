@@ -17,5 +17,7 @@ public record RecruiterApplicationResponse(
         Boolean     hardFilterPassed,
         Instant     submittedAt,
         LocalDate   interviewDate,
-        LocalTime   interviewTime
+        LocalTime   interviewTime,
+        String      xaiReportUrl,
+        String      decisionNotes
 ) {}

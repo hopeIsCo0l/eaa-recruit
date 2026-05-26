@@ -21,6 +21,8 @@ from src.utils.auth import verify_internal_api_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/xai", dependencies=[Depends(verify_internal_api_key)])
+# Separate router for public download (Spring proxies the download with its own auth)
+public_router = APIRouter(prefix="/api/v1/xai")
 
 
 class XaiReportRequest(BaseModel):
@@ -55,11 +57,9 @@ def build_report(body: XaiReportRequest) -> XaiReportResponse:
 
     cv_text = body.cvText or cv_text_cache.get(body.applicationId)
     if not cv_text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(f"No cached CV text for applicationId={body.applicationId}. "
-                    f"Supply cvText in the request body."),
-        )
+        # Fallback: use job description as proxy context for LIME attribution
+        logger.warning("No cached CV text for applicationId=%s — using job description as proxy", body.applicationId)
+        cv_text = f"Candidate: {body.candidateName}. Applied for: {body.jobTitle}. {body.jobDescription}"
 
     attribution    = explain_cv(cv_text, body.jobDescription, num_samples=body.limeSamples)
     justification  = generate_justification(JustificationInput(
@@ -95,7 +95,7 @@ def build_report(body: XaiReportRequest) -> XaiReportResponse:
     )
 
 
-@router.get("/report/{application_id}")
+@public_router.get("/report/{application_id}")
 def get_report(application_id: int) -> FileResponse:
     pdf_path = Path(STORAGE_DIR) / f"{application_id}_feedback.pdf"
     if not pdf_path.exists():

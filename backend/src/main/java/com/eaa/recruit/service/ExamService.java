@@ -75,7 +75,7 @@ public class ExamService {
             String optionsJson = serializeOptions(qr);
             Question question = Question.create(
                     exam, qr.type(), qr.questionText(),
-                    optionsJson, qr.correctAnswer(),
+                    optionsJson, qr.correctAnswer(), qr.idealAnswer(),
                     qr.marks(), order++);
             exam.addQuestion(question);
         }

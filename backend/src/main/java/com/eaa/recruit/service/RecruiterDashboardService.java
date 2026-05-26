@@ -64,7 +64,9 @@ public class RecruiterDashboardService {
                         row[9] == null ? null : (Boolean) row[9],               // hardFilterPassed
                         row[10] == null ? null : (row[10] instanceof Instant inst ? inst : ((java.sql.Timestamp) row[10]).toInstant()), // submittedAt
                         row[11] == null ? null : (row[11] instanceof LocalDate ld ? ld : ((java.sql.Date) row[11]).toLocalDate()), // interviewDate
-                        row[12] == null ? null : (row[12] instanceof LocalTime lt ? lt : ((java.sql.Time) row[12]).toLocalTime())  // interviewTime
+                        row[12] == null ? null : (row[12] instanceof LocalTime lt ? lt : ((java.sql.Time) row[12]).toLocalTime()), // interviewTime
+                        (String) row[13],                                       // xaiReportUrl
+                        (String) row[14]                                        // decisionNotes
                 ))
                 .toList();
     }

@@ -33,7 +33,7 @@ def _build_attribution_chart(attribution: AttributionResult, tmp_path: Path) -> 
     items = sorted(attribution.raw_weights[:10], key=lambda x: x[1])
     words = [w for w, _ in items]
     weights = [s for _, s in items]
-    bar_colors = [ACCENT.hexval() if s > 0 else "#e74c3c" for s in weights]
+    bar_colors = ["#2e86c1" if s > 0 else "#e74c3c" for s in weights]
 
     fig, ax = plt.subplots(figsize=(7, max(3, len(words) * 0.4)))
     ax.barh(words, weights, color=bar_colors)

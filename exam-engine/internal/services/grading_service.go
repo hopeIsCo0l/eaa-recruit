@@ -3,10 +3,16 @@ package services
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/EAA-recruit/exam-engine/internal/domain"
 )
+
+type shortAnswerTask struct {
+	question domain.Question
+	answer   string
+}
 
 // GradingService orchestrates MCQ scoring and dispatches short-answer tasks to the worker pool (FR-54, FR-55, FR-56).
 type GradingService struct {
@@ -44,7 +50,7 @@ func (g *GradingService) Grade(ctx context.Context, session *domain.ExamSession,
 	}
 
 	var mcqScore float64
-	var shortAnswerPending int
+	var saTasks []shortAnswerTask
 
 	for _, q := range questions {
 		answer, answered := session.AnswersMap[q.ID]
@@ -55,8 +61,7 @@ func (g *GradingService) Grade(ctx context.Context, session *domain.ExamSession,
 			}
 		case domain.QuestionShortAnswer:
 			if answered {
-				shortAnswerPending++
-				g.dispatchShortAnswerGrading(session, q, answer, ttlSecs)
+				saTasks = append(saTasks, shortAnswerTask{question: q, answer: answer})
 			}
 		}
 	}
@@ -64,7 +69,7 @@ func (g *GradingService) Grade(ctx context.Context, session *domain.ExamSession,
 	session.MCQScore = mcqScore
 	ttl := time.Duration(ttlSecs) * time.Second
 
-	if shortAnswerPending == 0 {
+	if len(saTasks) == 0 {
 		session.TotalScore = mcqScore
 		session.GradingComplete = true
 		if err := g.sessionSvc.Update(ctx, session, ttl); err != nil {
@@ -72,46 +77,85 @@ func (g *GradingService) Grade(ctx context.Context, session *domain.ExamSession,
 		}
 		g.springClient.PublishExamCompleted(session)
 		log.Printf("grading complete for %s: MCQ=%.2f, total=%.2f", session.CandidateID, mcqScore, session.TotalScore)
-	} else {
-		session.TotalScore = mcqScore
-		_ = g.sessionSvc.Update(ctx, session, ttl)
-		log.Printf("MCQ graded for %s: %.2f — waiting on %d short-answer(s)", session.CandidateID, mcqScore, shortAnswerPending)
+		return
 	}
+
+	session.TotalScore = mcqScore
+	_ = g.sessionSvc.Update(ctx, session, ttl)
+	log.Printf("MCQ graded for %s: %.2f — waiting on %d short-answer(s)", session.CandidateID, mcqScore, len(saTasks))
+
+	// Dispatch all short-answer grading in parallel, then collect results atomically
+	go g.gradeShortAnswersAndFinalize(session, saTasks, ttlSecs)
 }
 
-// dispatchShortAnswerGrading sends one short-answer task to the worker pool
-// and collects the result asynchronously (FR-56, FR-57).
-func (g *GradingService) dispatchShortAnswerGrading(session *domain.ExamSession, q domain.Question, answer string, ttlSecs int64) {
-	done := make(chan float64, 1)
-	task := GradingTask{
-		CandidateID: session.CandidateID,
-		JobID:       session.JobID,
-		QuestionID:  q.ID,
-		IdealAnswer: q.CorrectAnswer,
-		Answer:      answer,
-		MaxMarks:    q.Marks,
-		Done:        done,
+// gradeShortAnswersAndFinalize dispatches all short-answer tasks, waits for ALL results,
+// then updates the session once and publishes a single exam-completed event.
+func (g *GradingService) gradeShortAnswersAndFinalize(session *domain.ExamSession, saTasks []shortAnswerTask, ttlSecs int64) {
+	type result struct {
+		questionID string
+		score      float64
 	}
-	g.pool.Submit(task)
 
-	go func() {
-		ctx := context.Background()
-		score := <-done
+	var mu sync.Mutex
+	var results []result
+	var wg sync.WaitGroup
 
-		sess, err := g.sessionSvc.Get(ctx, session.CandidateID, session.JobID)
-		if err != nil {
-			log.Printf("failed to retrieve session for short-answer update: %v", err)
-			return
-		}
-		sess.ShortAnswerScore += score
-		sess.TotalScore = sess.MCQScore + sess.ShortAnswerScore
-		sess.GradingComplete = true
-		ttl := time.Duration(ttlSecs) * time.Second
-		if err := g.sessionSvc.Update(ctx, sess, ttl); err != nil {
-			log.Printf("failed to persist short-answer score for %s: %v", session.CandidateID, err)
-		}
-		g.springClient.PublishExamCompleted(sess)
-		log.Printf("short-answer graded for %s q=%s score=%.2f total=%.2f",
-			session.CandidateID, q.ID, score, sess.TotalScore)
-	}()
+	for _, t := range saTasks {
+		wg.Add(1)
+		go func(q domain.Question, answer string) {
+			defer wg.Done()
+
+			idealAnswer := q.IdealAnswer
+			if idealAnswer == "" {
+				idealAnswer = q.CorrectAnswer
+			}
+
+			done := make(chan float64, 1)
+			task := GradingTask{
+				CandidateID: session.CandidateID,
+				JobID:       session.JobID,
+				QuestionID:  q.ID,
+				IdealAnswer: idealAnswer,
+				Answer:      answer,
+				MaxMarks:    q.Marks,
+				Done:        done,
+			}
+			g.pool.Submit(task)
+			score := <-done
+
+			mu.Lock()
+			results = append(results, result{questionID: q.ID, score: score})
+			mu.Unlock()
+
+			log.Printf("short-answer graded for %s q=%s score=%.2f",
+				session.CandidateID, q.ID, score)
+		}(t.question, t.answer)
+	}
+
+	wg.Wait()
+
+	// All short-answer grading complete — update session atomically
+	ctx := context.Background()
+	sess, err := g.sessionSvc.Get(ctx, session.CandidateID, session.JobID)
+	if err != nil {
+		log.Printf("failed to retrieve session for final grading: %v", err)
+		return
+	}
+
+	var saTotal float64
+	for _, r := range results {
+		saTotal += r.score
+	}
+
+	sess.ShortAnswerScore = saTotal
+	sess.TotalScore = sess.MCQScore + saTotal
+	sess.GradingComplete = true
+	ttl := time.Duration(ttlSecs) * time.Second
+	if err := g.sessionSvc.Update(ctx, sess, ttl); err != nil {
+		log.Printf("failed to persist final score for %s: %v", session.CandidateID, err)
+	}
+
+	g.springClient.PublishExamCompleted(sess)
+	log.Printf("grading complete for %s: MCQ=%.2f SA=%.2f total=%.2f",
+		session.CandidateID, sess.MCQScore, saTotal, sess.TotalScore)
 }
