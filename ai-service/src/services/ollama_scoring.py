@@ -241,6 +241,17 @@ def grade_answer(
         similarity = max(0.0, min(1.0, similarity))
         awarded = float(parsed["awarded_marks"])
         awarded = max(0.0, min(float(max_marks), awarded))
+
+        # Post-processing: enforce strict proportionality for small models
+        # Cap awarded marks at similarity * max_marks (model can't award more than similarity implies)
+        cap = similarity * float(max_marks)
+        if awarded > cap + 0.5:
+            logger.info("Capping awarded %.1f → %.1f (similarity %.2f cap)", awarded, cap, similarity)
+            awarded = cap
+        # Low similarity = low marks (at or below 0.3 similarity → zero marks)
+        if similarity <= 0.3:
+            awarded = 0.0
+
         feedback = str(parsed.get("feedback", ""))
         logger.info("Ollama grading: similarity=%.2f awarded=%.1f/%s — %s",
                      similarity, awarded, max_marks, feedback[:80])
