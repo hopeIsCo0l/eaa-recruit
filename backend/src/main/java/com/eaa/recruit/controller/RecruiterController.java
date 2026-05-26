@@ -3,10 +3,12 @@ package com.eaa.recruit.controller;
 import com.eaa.recruit.dto.ApiResponse;
 import com.eaa.recruit.dto.availability.AvailabilitySlotBatchRequest;
 import com.eaa.recruit.dto.availability.AvailabilitySlotResponse;
+import com.eaa.recruit.dto.recruiter.AdvanceApplicationRequest;
 import com.eaa.recruit.dto.recruiter.DashboardEntryResponse;
 import com.eaa.recruit.dto.recruiter.RecruiterApplicationResponse;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsRecruiter;
+import com.eaa.recruit.service.ApplicationAdvanceService;
 import com.eaa.recruit.service.AvailabilitySlotService;
 import com.eaa.recruit.service.RecruiterDashboardService;
 import jakarta.validation.Valid;
@@ -25,13 +27,16 @@ import java.util.List;
 @IsRecruiter
 public class RecruiterController {
 
-    private final AvailabilitySlotService  availabilitySlotService;
+    private final AvailabilitySlotService   availabilitySlotService;
     private final RecruiterDashboardService dashboardService;
+    private final ApplicationAdvanceService advanceService;
 
     public RecruiterController(AvailabilitySlotService availabilitySlotService,
-                                RecruiterDashboardService dashboardService) {
+                               RecruiterDashboardService dashboardService,
+                               ApplicationAdvanceService advanceService) {
         this.availabilitySlotService = availabilitySlotService;
         this.dashboardService        = dashboardService;
+        this.advanceService          = advanceService;
     }
 
     /**
@@ -83,5 +88,19 @@ public class RecruiterController {
 
         Page<DashboardEntryResponse> dashboard = dashboardService.getDashboard(principal, pageable);
         return ResponseEntity.ok(ApiResponse.success(dashboard));
+    }
+
+    /**
+     * POST /api/v1/recruiters/applications/{id}/advance
+     * Move an application to a new stage (kanban drag-and-drop).
+     */
+    @PostMapping("/applications/{id}/advance")
+    public ResponseEntity<ApiResponse<Void>> advanceApplication(
+            @PathVariable Long id,
+            @Valid @RequestBody AdvanceApplicationRequest request,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+
+        advanceService.advance(id, request, principal);
+        return ResponseEntity.ok(ApiResponse.success("Application advanced to " + request.targetStatus(), null));
     }
 }

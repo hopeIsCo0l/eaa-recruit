@@ -87,4 +87,17 @@ public class JobPosting extends BaseEntity {
     public void close()                 { this.status = JobPostingStatus.CLOSED; }
     public void scheduleExam()          { this.status = JobPostingStatus.EXAM_SCHEDULED; }
     public void archive()               { this.status = JobPostingStatus.ARCHIVED; }
+
+    public void update(String title, String description, Integer minHeightCm,
+                       Integer minWeightKg, String requiredDegree,
+                       LocalDate openDate, LocalDate closeDate, LocalDate examDate) {
+        this.title          = title;
+        this.description    = description;
+        this.minHeightCm    = minHeightCm;
+        this.minWeightKg    = minWeightKg;
+        this.requiredDegree = requiredDegree;
+        this.openDate       = openDate;
+        this.closeDate      = closeDate;
+        this.examDate       = examDate;
+    }
 }

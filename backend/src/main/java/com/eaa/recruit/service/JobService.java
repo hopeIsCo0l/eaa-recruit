@@ -1,8 +1,10 @@
 package com.eaa.recruit.service;
 
+import com.eaa.recruit.dto.job.ChangeJobStatusRequest;
 import com.eaa.recruit.dto.job.CreateJobRequest;
 import com.eaa.recruit.dto.job.CreateJobResponse;
 import com.eaa.recruit.dto.job.JobResponse;
+import com.eaa.recruit.dto.job.UpdateJobRequest;
 import com.eaa.recruit.entity.JobPosting;
 import com.eaa.recruit.entity.JobPostingStatus;
 import com.eaa.recruit.entity.User;
@@ -96,6 +98,66 @@ public class JobService {
                 job.getExamDate(),
                 job.getStatus()
         );
+    }
+
+    @Transactional
+    public JobResponse updateJob(Long id, UpdateJobRequest request, AuthenticatedUser principal) {
+        JobPosting job = jobPostingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + id));
+
+        if (!job.getCreatedBy().getId().equals(principal.id())) {
+            throw new BusinessException("You can only edit your own job postings");
+        }
+        if (job.getStatus() == JobPostingStatus.ARCHIVED) {
+            throw new BusinessException("Archived jobs cannot be edited");
+        }
+
+        job.update(
+                request.title(), request.description(),
+                request.minHeightCm(), request.minWeightKg(),
+                request.requiredDegree(),
+                request.openDate(), request.closeDate(), request.examDate()
+        );
+        job = jobPostingRepository.save(job);
+        log.info("Job posting updated id={} by recruiterId={}", id, principal.id());
+        return toResponse(job);
+    }
+
+    @Transactional
+    public JobResponse changeJobStatus(Long id, ChangeJobStatusRequest request, AuthenticatedUser principal) {
+        JobPosting job = jobPostingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + id));
+
+        if (!job.getCreatedBy().getId().equals(principal.id())) {
+            throw new BusinessException("You can only manage your own job postings");
+        }
+
+        switch (request.action().toLowerCase()) {
+            case "publish" -> {
+                if (job.getStatus() != JobPostingStatus.DRAFT) {
+                    throw new BusinessException("Only DRAFT jobs can be published");
+                }
+                job.publish();
+            }
+            case "close" -> {
+                if (job.getStatus() != JobPostingStatus.OPEN && job.getStatus() != JobPostingStatus.EXAM_SCHEDULED) {
+                    throw new BusinessException("Only OPEN or EXAM_SCHEDULED jobs can be closed");
+                }
+                job.close();
+            }
+            case "archive" -> {
+                if (job.getStatus() == JobPostingStatus.ARCHIVED) {
+                    throw new BusinessException("Job is already archived");
+                }
+                job.archive();
+            }
+            default -> throw new BusinessException("Unknown action: " + request.action()
+                    + ". Use: publish, close, archive");
+        }
+
+        job = jobPostingRepository.save(job);
+        log.info("Job status changed id={} to {} by recruiterId={}", id, job.getStatus(), principal.id());
+        return toResponse(job);
     }
 
     private void validateDateOrdering(CreateJobRequest request) {
