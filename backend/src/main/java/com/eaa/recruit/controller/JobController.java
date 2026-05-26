@@ -1,9 +1,11 @@
 package com.eaa.recruit.controller;
 
 import com.eaa.recruit.dto.ApiResponse;
+import com.eaa.recruit.dto.job.ChangeJobStatusRequest;
 import com.eaa.recruit.dto.job.CreateJobRequest;
 import com.eaa.recruit.dto.job.CreateJobResponse;
 import com.eaa.recruit.dto.job.JobResponse;
+import com.eaa.recruit.dto.job.UpdateJobRequest;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsAuthenticated;
 import com.eaa.recruit.security.rbac.IsRecruiter;
@@ -55,4 +57,23 @@ public class JobController {
     public ResponseEntity<ApiResponse<JobResponse>> getJob(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(jobService.getJob(id)));
     }
+
+    @PutMapping("/{id}")
+    @IsRecruiter
+    public ResponseEntity<ApiResponse<JobResponse>> updateJob(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateJobRequest request,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        return ResponseEntity.ok(ApiResponse.success("Job updated", jobService.updateJob(id, request, principal)));
+    }
+
+    @PatchMapping("/{id}/status")
+    @IsRecruiter
+    public ResponseEntity<ApiResponse<JobResponse>> changeJobStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody ChangeJobStatusRequest request,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        return ResponseEntity.ok(ApiResponse.success("Status changed", jobService.changeJobStatus(id, request, principal)));
+    }
 }
+

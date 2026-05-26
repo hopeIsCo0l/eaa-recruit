@@ -53,6 +53,30 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             """)
     List<Application> findScheduledForDateWithoutReminder(@Param("date") LocalDate date);
 
+    // Recruiter: all applications across their jobs
+    @Query(value = """
+            SELECT a.id              AS id,
+                   a.job_id          AS jobId,
+                   jp.title          AS jobTitle,
+                   u.full_name       AS candidateName,
+                   u.email           AS candidateEmail,
+                   a.status          AS status,
+                   a.cv_relevance_score AS cvRelevanceScore,
+                   a.exam_score      AS examScore,
+                   a.final_score     AS finalScore,
+                   a.hard_filter_passed AS hardFilterPassed,
+                   a.submitted_at    AS submittedAt,
+                   s.slot_date       AS interviewDate,
+                   s.start_time      AS interviewTime
+            FROM applications a
+            JOIN job_postings jp ON jp.id = a.job_id
+            JOIN users u ON u.id = a.candidate_id
+            LEFT JOIN availability_slots s ON s.id = a.interview_slot_id
+            WHERE jp.created_by_id = :recruiterId
+            ORDER BY a.submitted_at DESC
+            """, nativeQuery = true)
+    List<Object[]> findAllByRecruiterId(@Param("recruiterId") Long recruiterId);
+
     // FR-40: analytics
     @Query(value = """
             SELECT jp.title          AS jobTitle,

@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.routers import bias, cv_scoring, grading, health, ranking, xai
+from src.routers import bias, cv_scoring, grading, health, ranking, scoring_test, xai
 from src.services.embedding_service import load_model
 
 logging.basicConfig(
@@ -34,6 +34,15 @@ app = FastAPI(title="EAA AI Service")
 @app.on_event("startup")
 def startup_event() -> None:
     load_model()
+
+    # Pre-pull Ollama model so first scoring request isn't slow
+    from src.config import settings
+    if settings.ollama_enabled:
+        try:
+            from src.services.ollama_scoring import _ensure_model
+            _ensure_model()
+        except Exception as ex:
+            logger.warning("Ollama model pre-pull failed (will retry on first request): %s", ex)
 
 
 @app.middleware("http")
@@ -88,3 +97,4 @@ app.include_router(bias.router)
 app.include_router(cv_scoring.router)
 app.include_router(grading.router)
 app.include_router(xai.router)
+app.include_router(scoring_test.router)

@@ -73,24 +73,40 @@ export default function RecruiterDashboard() {
     let cancelled = false;
     (async () => {
       const { data, error } = await apiFetch<{
-        content?: Array<{ id: number; title: string; department?: string;
-                          applied: number; screened: number; ttf?: number }>;
+        content?: Array<{
+          jobId: number; jobTitle: string;
+          totalApplications: number; screeningCount: number;
+          examCount: number; interviewCount: number; decidedCount: number;
+        }>;
       }>("/api/v1/recruiters/dashboard");
       if (cancelled) return;
       if (!error && data?.content) {
-        setActiveJobs(data.content.map((j) => ({
-          id: String(j.id),
-          title: j.title,
-          dept: j.department ?? "—",
-          applied: j.applied,
-          screened: j.screened,
-          ttf: j.ttf ?? 0,
+        const jobs = data.content;
+        setActiveJobs(jobs.map((j) => ({
+          id: String(j.jobId),
+          title: j.jobTitle,
+          dept: "—",
+          applied: j.totalApplications,
+          screened: j.screeningCount + j.examCount + j.interviewCount + j.decidedCount,
+          ttf: 0,
         })));
+
+        const totalApplied    = jobs.reduce((s, j) => s + j.totalApplications, 0);
+        const totalScreened   = jobs.reduce((s, j) => s + j.screeningCount + j.examCount + j.interviewCount + j.decidedCount, 0);
+        const totalInterviewed = jobs.reduce((s, j) => s + j.interviewCount + j.decidedCount, 0);
+        const totalDecided    = jobs.reduce((s, j) => s + j.decidedCount, 0);
+
         setKpis({
-          activeCycles: data.content.length,
-          totalApplicants: data.content.reduce((s, j) => s + j.applied, 0),
+          activeCycles: jobs.length,
+          totalApplicants: totalApplied,
           avgTtfDays: 0,
         });
+        setFunnelData([
+          { name: "APPLIED",     value: totalApplied,      fill: "var(--c-accent)" },
+          { name: "AI SCREENED", value: totalScreened,     fill: "var(--c-accent-hover)" },
+          { name: "INTERVIEWED", value: totalInterviewed,  fill: "#B39900" },
+          { name: "DECIDED",     value: totalDecided,      fill: "#805E00" },
+        ]);
       }
       setLoading(false);
     })();

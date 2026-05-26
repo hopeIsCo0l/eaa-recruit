@@ -33,7 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 COPY src/ src/
 
-RUN useradd -m app && chown -R app:app /app
+RUN useradd -m app && chown -R app:app /app \
+ && mkdir -p /home/app/.cache/huggingface && chown -R app:app /home/app/.cache
 USER app
 
 EXPOSE 8000

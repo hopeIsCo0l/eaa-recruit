@@ -40,9 +40,24 @@ def health_check():
     ram_mb = round(proc.memory_info().rss / (1024 ** 2), 2)
     cpu_pct = round(psutil.cpu_percent(interval=None), 2)
 
+    # Ollama LLM status
+    from src.config import settings
+    ollama_status = "disabled"
+    if settings.ollama_enabled:
+        try:
+            from src.services.ollama_scoring import is_available, _model_ready
+            if is_available():
+                ollama_status = "ready" if _model_ready else "available"
+            else:
+                ollama_status = "unreachable"
+        except Exception:
+            ollama_status = "error"
+
     response: dict = {
         "status": status,
         "modelLoaded": model_loaded,
+        "ollamaStatus": ollama_status,
+        "ollamaModel": settings.ollama_model if settings.ollama_enabled else None,
         "cpuUsagePercent": cpu_pct,
         "ramUsageMb": ram_mb,
     }

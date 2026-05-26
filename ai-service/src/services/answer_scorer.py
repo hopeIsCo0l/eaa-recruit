@@ -1,3 +1,9 @@
+"""
+Short-answer grading.
+
+Primary: Ollama LLM (real language understanding)
+Fallback: SBERT cosine similarity (if Ollama unavailable)
+"""
 import logging
 import os
 from dataclasses import dataclass, field
@@ -5,6 +11,7 @@ from typing import List, Optional
 
 import numpy as np
 
+from src.config import settings
 from src.services.answer_key_service import get_answer_key_embedding
 from src.services.embedding_service import embed
 from src.services.keyword_checker import KeywordCheckResult, check_keywords, apply_keyword_penalty
@@ -32,13 +39,14 @@ def _cosine(a: List[float], b: List[float]) -> float:
     return float(np.dot(va, vb) / (n_a * n_b))
 
 
-def score_answer(
+def _sbert_grade(
     question_id: str,
     ideal_answer: str,
     candidate_answer: str,
     max_marks: float,
     required_keywords: Optional[List[str]] = None,
 ) -> AnswerScore:
+    """Original SBERT-based grading (fallback)."""
     ideal_vec = get_answer_key_embedding(question_id, ideal_answer)
     candidate_vec = embed(candidate_answer)
     similarity = _cosine(ideal_vec, candidate_vec)
@@ -46,23 +54,16 @@ def score_answer(
     if similarity >= THRESHOLD_FULL:
         awarded = max_marks
     elif similarity >= THRESHOLD_PARTIAL:
-        # Linear interpolation between partial and full threshold
         ratio = (similarity - THRESHOLD_PARTIAL) / (THRESHOLD_FULL - THRESHOLD_PARTIAL)
         awarded = round(max_marks * (0.5 + 0.5 * ratio), 2)
     else:
         awarded = 0.0
 
-    # Apply keyword penalty if keywords defined
     kw_result = None
     if required_keywords:
         kw_result = check_keywords(candidate_answer, required_keywords)
         awarded = apply_keyword_penalty(awarded, kw_result, max_marks)
 
-    logger.info(
-        "Scored answer question_id=%s similarity=%.4f awarded=%.2f/%.2f keywords_missing=%s",
-        question_id, similarity, awarded, max_marks,
-        kw_result.missing if kw_result else [],
-    )
     return AnswerScore(
         question_id=question_id,
         raw_similarity=round(similarity, 4),
@@ -70,3 +71,51 @@ def score_answer(
         max_marks=max_marks,
         keyword_result=kw_result,
     )
+
+
+def score_answer(
+    question_id: str,
+    ideal_answer: str,
+    candidate_answer: str,
+    max_marks: float,
+    required_keywords: Optional[List[str]] = None,
+) -> AnswerScore:
+    """
+    Grade a candidate answer.
+
+    Uses Ollama LLM when available, falls back to SBERT cosine similarity.
+    """
+    if settings.ollama_enabled:
+        try:
+            from src.services.ollama_scoring import grade_answer
+            result = grade_answer(ideal_answer, candidate_answer, max_marks)
+            if result is not None:
+                similarity, awarded, feedback = result
+
+                # Still apply keyword check on top of LLM grade
+                kw_result = None
+                if required_keywords:
+                    kw_result = check_keywords(candidate_answer, required_keywords)
+                    awarded = apply_keyword_penalty(awarded, kw_result, max_marks)
+
+                logger.info(
+                    "Graded via Ollama: question_id=%s similarity=%.4f awarded=%.2f/%.2f — %s",
+                    question_id, similarity, awarded, max_marks, feedback[:80],
+                )
+                return AnswerScore(
+                    question_id=question_id,
+                    raw_similarity=similarity,
+                    awarded_marks=awarded,
+                    max_marks=max_marks,
+                    keyword_result=kw_result,
+                )
+            logger.warning("Ollama grading returned None — falling back to SBERT")
+        except Exception as ex:
+            logger.warning("Ollama grading failed (%s) — falling back to SBERT", ex)
+
+    result = _sbert_grade(question_id, ideal_answer, candidate_answer, max_marks, required_keywords)
+    logger.info(
+        "Graded via SBERT fallback: question_id=%s similarity=%.4f awarded=%.2f/%.2f",
+        question_id, result.raw_similarity, result.awarded_marks, result.max_marks,
+    )
+    return result

@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     internal_api_key: str = "change-me-internal-key"
     ai_service_public_url: str = "http://ai-service:8000"
 
+    # Ollama LLM integration
+    ollama_url: str = "http://ollama:11434"
+    ollama_model: str = "qwen2.5:1.5b"
+    ollama_enabled: bool = True  # set False to fall back to SBERT-only scoring
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
