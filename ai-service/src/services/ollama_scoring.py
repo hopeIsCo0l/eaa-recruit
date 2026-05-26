@@ -191,8 +191,6 @@ You MUST respond with ONLY a valid JSON object — no extra text."""
 
 GRADE_PROMPT_TEMPLATE = """Grade this candidate's answer against the ideal answer.
 
-QUESTION CONTEXT: This is a technical/knowledge question for aviation recruitment.
-
 IDEAL ANSWER:
 {ideal_answer}
 
@@ -201,16 +199,16 @@ CANDIDATE'S ANSWER:
 
 MAXIMUM MARKS: {max_marks}
 
-Grading criteria (BE STRICT):
-- Full marks ONLY if the answer covers ALL key points from the ideal answer
-- Partial marks for answers that capture SOME key points correctly
-- Zero marks for completely wrong, irrelevant, or off-topic answers
-- If the candidate's answer describes something fundamentally different from the ideal answer, award 0 marks
-- Consider semantic meaning, not just exact wording
-- awarded_marks MUST be consistent with similarity (low similarity = low marks)
+STRICT GRADING RULES:
+1. Does the candidate's answer discuss the SAME TOPIC as the ideal answer? If NO → similarity=0.0, awarded_marks=0
+2. Does the answer contain the KEY CONCEPTS from the ideal? If NO → similarity below 0.3, awarded_marks below 2
+3. Full marks ONLY if ALL key points are covered correctly
+4. similarity and awarded_marks MUST be proportional: similarity 0.5 = half marks, similarity 0.0 = 0 marks
 
-Respond with ONLY this JSON format:
-{{"similarity": <float 0.0-1.0>, "awarded_marks": <float 0 to {max_marks}>, "feedback": "<brief grading note>"}}"""
+EXAMPLE: If ideal is about "aerodynamic lift via pressure difference" and candidate talks about "engine thrust" → DIFFERENT TOPIC → similarity=0.0, awarded_marks=0
+
+Respond with ONLY this JSON:
+{{"similarity": <float 0.0-1.0>, "awarded_marks": <float 0 to {max_marks}>, "feedback": "<one sentence>"}}"""
 
 
 def grade_answer(
