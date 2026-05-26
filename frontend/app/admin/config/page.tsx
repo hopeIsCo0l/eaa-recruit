@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
+// ─── Shared UI primitives ──────────────────────────────────────────────────
 function SectionLabel({ children }: { children: string }) {
   return (
     <div className="flex items-center gap-3 mb-5">
@@ -19,15 +21,7 @@ function ConfigBlock({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-[6px]">
       <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">{label}</label>
@@ -38,15 +32,9 @@ function Field({
 }
 
 function TextInput({
-  value,
-  onChange,
-  placeholder,
-  type = "text",
+  value, onChange, placeholder, type = "text",
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
 }) {
   return (
     <input
@@ -59,97 +47,258 @@ function TextInput({
   );
 }
 
-function SliderField({
-  label,
-  hint,
-  value,
-  onChange,
-  min,
-  max,
-  unit,
-}: {
-  label: string;
-  hint?: string;
-  value: number;
-  onChange: (v: number) => void;
-  min: number;
-  max: number;
-  unit?: string;
-}) {
-  return (
-    <Field label={label} hint={hint}>
-      <div className="flex items-center gap-4">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="flex-1 accent-[var(--c-accent)] h-[2px] cursor-pointer"
-        />
-        <span className="font-ibm-mono text-[13px] font-bold text-[var(--c-accent)] w-[52px] text-right shrink-0">
-          {value}{unit}
-        </span>
-      </div>
-    </Field>
-  );
-}
+// ─── AI Models panel (wired) ──────────────────────────────────────────────
 
-function SaveBar({ onSave }: { onSave: () => void }) {
-  return (
-    <div className="flex items-center justify-end gap-3 mt-6">
-      <button className="h-[38px] px-5 border border-[var(--c-border)] font-ibm-mono text-[10px] text-[var(--c-text-muted)] tracking-[1.5px] hover:text-[var(--c-text)] hover:border-[var(--c-text-muted)] transition-colors">
-        DISCARD
-      </button>
-      <button
-        onClick={onSave}
-        className="h-[38px] px-6 bg-[var(--c-accent)] font-ibm-mono text-[10px] font-bold text-[var(--c-text)] tracking-[2px] hover:bg-[var(--c-accent-hover)] transition-colors"
-      >
-        SAVE CHANGES
-      </button>
-    </div>
-  );
-}
+type AiModel = {
+  id: number;
+  modelVersion: string;
+  description: string | null;
+  active: boolean;
+  activatedAt: string;
+  createdAt: string;
+};
 
-export default function ConfigPage() {
-  // NLP
-  const [stopwords, setStopwords] = useState(
-    "aviation, flight, aircraft, pilot, crew, airline, duty, roster, report, comply, adherence, responsibility, team, ensure, support"
-  );
+function AiModelsPanel() {
+  const [models, setModels] = useState<AiModel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Thresholds
-  const [shortlistCutoff, setShortlistCutoff] = useState(70);
-  const [examTimer, setExamTimer]             = useState(90);
-  const [vectorWeight, setVectorWeight]       = useState(60);
-  const [examWeight, setExamWeight]           = useState(40);
+  // Register form
+  const [newVersion, setNewVersion] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  // SMTP
-  const [smtpHost, setSmtpHost]   = useState("smtp.eaa.et");
-  const [smtpPort, setSmtpPort]   = useState("587");
-  const [smtpUser, setSmtpUser]   = useState("recruit@eaa.et");
-  const [smtpPass, setSmtpPass]   = useState("");
+  // Track which row is mid-activation for spinner
+  const [activatingId, setActivatingId] = useState<number | null>(null);
 
-  // SMS
-  const [smsGateway, setSmsGateway] = useState("https://sms.ethiotelecom.et/api");
-  const [smsKey, setSmsKey]         = useState("");
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await apiFetch<AiModel[]>("/api/v1/admin/ai-models");
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    setModels(data ?? []);
+  }, []);
 
-  const [saved, setSaved] = useState(false);
+  useEffect(() => { load(); }, [load]);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
+  async function register(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!newVersion.trim()) { setError("MODEL VERSION REQUIRED"); return; }
+    setSubmitting(true);
+    const { error } = await apiFetch<AiModel>("/api/v1/admin/ai-models", {
+      method: "POST",
+      body: JSON.stringify({
+        modelVersion: newVersion.trim(),
+        description: newDesc.trim() || undefined,
+      }),
+    });
+    setSubmitting(false);
+    if (error) { setError(error.message.toUpperCase()); return; }
+    setNewVersion("");
+    setNewDesc("");
+    await load();
+  }
+
+  async function activate(id: number) {
+    setError(null);
+    setActivatingId(id);
+    const { error } = await apiFetch<AiModel>(`/api/v1/admin/ai-models/${id}/activate`, {
+      method: "POST",
+    });
+    setActivatingId(null);
+    if (error) { setError(error.message.toUpperCase()); return; }
+    await load();
+  }
 
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto">
-      {/* Save toast */}
-      {saved && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 bg-[var(--c-bg-elev)] border border-[var(--c-accent)]">
-          <div className="w-[6px] h-[6px] rounded-full bg-[var(--c-accent)]" />
-          <span className="font-ibm-mono text-[10px] text-[var(--c-accent)] tracking-[1.5px]">CONFIGURATION SAVED</span>
+    <ConfigBlock>
+      <form onSubmit={register} className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="MODEL VERSION" hint="Unique identifier — e.g. v2.0.3-en">
+            <TextInput value={newVersion} onChange={setNewVersion} placeholder="v2.0.3-en" />
+          </Field>
+          <Field label="DESCRIPTION (OPTIONAL)" hint="Free-text changelog or notes">
+            <TextInput value={newDesc} onChange={setNewDesc} placeholder="Improved Amharic resume parsing" />
+          </Field>
+        </div>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="h-[38px] px-5 bg-[var(--c-accent)] font-ibm-mono text-[10px] font-bold text-[var(--c-text)] tracking-[2px] hover:bg-[var(--c-accent-hover)] transition-colors disabled:opacity-50 self-start"
+        >
+          {submitting ? "REGISTERING…" : "+ REGISTER VERSION"}
+        </button>
+      </form>
+
+      {error && (
+        <div className="px-3 py-2 border border-[var(--c-warn)]/40 bg-[var(--c-warn)]/5">
+          <span className="font-ibm-mono text-[10px] text-[var(--c-warn)] tracking-[1px]">{error}</span>
         </div>
       )}
 
+      <div className="border-t border-[var(--c-border-soft)] pt-5">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">
+            REGISTERED VERSIONS — {models.length}
+          </span>
+          <button
+            onClick={load}
+            className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] hover:text-[var(--c-accent)] tracking-[1px]"
+          >
+            REFRESH
+          </button>
+        </div>
+
+        {loading && models.length === 0 ? (
+          <div className="py-6 text-center font-ibm-mono text-[10px] text-[var(--c-text-faint)] tracking-[1.5px]">
+            LOADING…
+          </div>
+        ) : models.length === 0 ? (
+          <div className="py-6 text-center font-ibm-mono text-[10px] text-[var(--c-text-faint)] tracking-[1.5px]">
+            NO MODEL VERSIONS REGISTERED YET
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead>
+                <tr className="border-b border-[var(--c-border-soft)]">
+                  {["ID", "VERSION", "DESCRIPTION", "STATUS", "CREATED", "ACTION"].map((h) => (
+                    <th key={h} className="text-left px-3 py-2 font-ibm-mono text-[9px] text-[var(--c-text-dim)] tracking-[1.5px]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {models.map((m) => (
+                  <tr key={m.id} className="border-b border-[var(--c-bg-muted)] hover:bg-[var(--c-bg)] transition-colors">
+                    <td className="px-3 py-2 font-ibm-mono text-[9px] text-[var(--c-text-dim)]">{m.id}</td>
+                    <td className="px-3 py-2 font-ibm-mono text-[11px] text-[var(--c-text)] font-bold">{m.modelVersion}</td>
+                    <td className="px-3 py-2 font-ibm-mono text-[10px] text-[var(--c-text-sub)] max-w-[260px] truncate">{m.description ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-[6px]">
+                        <div
+                          className="w-[5px] h-[5px] rounded-full shrink-0"
+                          style={{ background: m.active ? "var(--c-accent)" : "var(--c-text-faint)" }}
+                        />
+                        <span
+                          className="font-ibm-mono text-[9px] tracking-[1px]"
+                          style={{ color: m.active ? "var(--c-accent)" : "var(--c-text-dim)" }}
+                        >
+                          {m.active ? "ACTIVE" : "INACTIVE"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 font-ibm-mono text-[9px] text-[var(--c-text-dim)]">
+                      {new Date(m.createdAt).toISOString().slice(0, 19).replace("T", " ")}
+                    </td>
+                    <td className="px-3 py-2">
+                      {m.active ? (
+                        <span className="font-ibm-mono text-[9px] text-[var(--c-text-faint)] tracking-[1px]">// CURRENT</span>
+                      ) : (
+                        <button
+                          onClick={() => activate(m.id)}
+                          disabled={activatingId === m.id}
+                          className="font-ibm-mono text-[9px] text-[var(--c-accent)] hover:opacity-70 tracking-[1px] disabled:opacity-50"
+                        >
+                          {activatingId === m.id ? "ACTIVATING…" : "ACTIVATE"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </ConfigBlock>
+  );
+}
+
+// ─── System Health panel (wired) ───────────────────────────────────────────
+
+type SystemHealth = {
+  database: { up: boolean; activeConnections: number; idleConnections: number };
+  redis: { up: boolean; info: string };
+  uptimeSeconds: number;
+};
+
+function SystemHealthPanel() {
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data, error } = await apiFetch<SystemHealth>("/api/v1/admin/system/health");
+    if (error) { setError(error.message); return; }
+    setError(null);
+    setHealth(data ?? null);
+  }, []);
+
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 15_000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  function fmtUptime(sec: number): string {
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return `${d}d ${h}h ${m}m`;
+  }
+
+  return (
+    <ConfigBlock>
+      {error && (
+        <div className="px-3 py-2 border border-[var(--c-warn)]/40 bg-[var(--c-warn)]/5">
+          <span className="font-ibm-mono text-[10px] text-[var(--c-warn)] tracking-[1px]">{error}</span>
+        </div>
+      )}
+      {!health ? (
+        <div className="py-4 text-center font-ibm-mono text-[10px] text-[var(--c-text-faint)]">LOADING HEALTH…</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            {
+              label: "DATABASE",
+              up: health.database.up,
+              detail: `${health.database.activeConnections} active / ${health.database.idleConnections} idle`,
+            },
+            {
+              label: "REDIS",
+              up: health.redis.up,
+              detail: health.redis.info,
+            },
+            {
+              label: "UPTIME",
+              up: true,
+              detail: fmtUptime(health.uptimeSeconds),
+            },
+          ].map((s) => (
+            <div key={s.label} className="p-4 bg-[var(--c-bg)] border border-[var(--c-border-soft)] flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-[6px] h-[6px] rounded-full shrink-0"
+                  style={{ background: s.up ? "var(--c-accent)" : "var(--c-warn)" }}
+                />
+                <span className="font-ibm-mono text-[9px] tracking-[1.5px]" style={{ color: s.up ? "var(--c-accent)" : "var(--c-warn)" }}>
+                  {s.label}
+                </span>
+              </div>
+              <span className="font-ibm-mono text-[10px] text-[var(--c-text-sub)] truncate">{s.detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </ConfigBlock>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────
+
+export default function ConfigPage() {
+  return (
+    <div className="p-6 md:p-8 max-w-[1400px] mx-auto">
       {/* Page header */}
       <div className="flex flex-col gap-1 mb-8">
         <span className="font-ibm-mono text-[10px] text-[var(--c-text-dim)] tracking-[2px]">[05] // CONFIGURATION</span>
@@ -157,131 +306,33 @@ export default function ConfigPage() {
           System Configuration
         </h1>
         <p className="font-ibm-mono text-[11px] text-[var(--c-text-muted)] tracking-[0.5px]">
-          Global rules, NLP settings, integration credentials, and scoring weights
+          AI model registry and live system health (Super Admin only)
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* NLP Stopwords */}
-        <div className="lg:col-span-2">
-          <SectionLabel>NLP PREPROCESSOR — AVIATION STOPWORDS</SectionLabel>
-          <ConfigBlock>
-            <Field
-              label="STOPWORD LIST (COMMA-SEPARATED)"
-              hint="These words are stripped from CVs before vectorization. Tuning this list directly affects similarity score quality."
-            >
-              <textarea
-                value={stopwords}
-                onChange={(e) => setStopwords(e.target.value)}
-                rows={4}
-                className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] px-3 py-2 font-ibm-mono text-[11px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none focus:border-[var(--c-accent)] transition-colors resize-none leading-relaxed"
-              />
-            </Field>
-            <div className="flex items-center gap-3 font-ibm-mono text-[9px] text-[var(--c-text-dim)]">
-              <span>{stopwords.split(",").filter(Boolean).length} WORDS DEFINED</span>
-              <div className="w-[1px] h-[10px] bg-[var(--c-border)]" />
-              <button
-                onClick={() => setStopwords("")}
-                className="text-[var(--c-warn)] hover:text-[var(--c-text)] transition-colors tracking-[1px]"
-              >
-                CLEAR ALL
-              </button>
-            </div>
-          </ConfigBlock>
+      <div className="flex flex-col gap-10">
+        <div>
+          <SectionLabel>AI MODEL REGISTRY — FR-39</SectionLabel>
+          <AiModelsPanel />
         </div>
 
-        {/* Global Thresholds */}
         <div>
-          <SectionLabel>GLOBAL THRESHOLDS</SectionLabel>
-          <ConfigBlock>
-            <SliderField
-              label="SHORTLIST CUTOFF SCORE"
-              hint="Candidates below this score are automatically marked as Not Shortlisted."
-              value={shortlistCutoff}
-              onChange={setShortlistCutoff}
-              min={40}
-              max={95}
-              unit="%"
-            />
-            <SliderField
-              label="EXAM TIMER (DEFAULT)"
-              hint="Default duration for role-specific written assessments."
-              value={examTimer}
-              onChange={setExamTimer}
-              min={30}
-              max={180}
-              unit=" MIN"
-            />
-            <div className="border-t border-[var(--c-border-soft)] pt-4">
-              <p className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px] mb-4">SCORING WEIGHT ALLOCATION</p>
-              <SliderField
-                label="CV VECTOR WEIGHT"
-                value={vectorWeight}
-                onChange={(v) => { setVectorWeight(v); setExamWeight(100 - v); }}
-                min={20}
-                max={80}
-                unit="%"
-              />
-              <div className="mt-3">
-                <SliderField
-                  label="EXAM SCORE WEIGHT"
-                  value={examWeight}
-                  onChange={(v) => { setExamWeight(v); setVectorWeight(100 - v); }}
-                  min={20}
-                  max={80}
-                  unit="%"
-                />
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex-1 h-[4px] bg-[var(--c-bg-muted)] overflow-hidden flex">
-                  <div className="h-full bg-[var(--c-accent)] transition-all" style={{ width: `${vectorWeight}%` }} />
-                  <div className="h-full bg-[var(--c-warn)] transition-all" style={{ width: `${examWeight}%` }} />
-                </div>
-                <span className="font-ibm-mono text-[8px] text-[var(--c-text-faint)]">TOTAL: 100%</span>
-              </div>
-            </div>
-          </ConfigBlock>
+          <SectionLabel>SYSTEM HEALTH — FR-38</SectionLabel>
+          <SystemHealthPanel />
         </div>
 
-        {/* Integration Settings */}
         <div>
-          <SectionLabel>INTEGRATION SETTINGS — SMTP</SectionLabel>
-          <ConfigBlock>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="SMTP HOST">
-                <TextInput value={smtpHost} onChange={setSmtpHost} placeholder="smtp.eaa.et" />
-              </Field>
-              <Field label="SMTP PORT">
-                <TextInput value={smtpPort} onChange={setSmtpPort} placeholder="587" />
-              </Field>
-            </div>
-            <Field label="SMTP USERNAME">
-              <TextInput value={smtpUser} onChange={setSmtpUser} placeholder="recruit@eaa.et" type="email" />
-            </Field>
-            <Field label="SMTP PASSWORD" hint="Stored encrypted at rest (AES-256).">
-              <TextInput value={smtpPass} onChange={setSmtpPass} placeholder="••••••••••••" type="password" />
-            </Field>
-          </ConfigBlock>
-
-          <div className="mt-6">
-            <SectionLabel>INTEGRATION SETTINGS — SMS GATEWAY</SectionLabel>
-            <ConfigBlock>
-              <Field label="SMS GATEWAY URL" hint="Ethiotelecom SMS API endpoint.">
-                <TextInput value={smsGateway} onChange={setSmsGateway} placeholder="https://sms.ethiotelecom.et/api" />
-              </Field>
-              <Field label="API KEY" hint="Stored encrypted at rest (AES-256).">
-                <TextInput value={smsKey} onChange={setSmsKey} placeholder="••••••••••••••••" type="password" />
-              </Field>
-              <button className="flex items-center gap-[8px] h-[34px] px-4 border border-[var(--c-border)] self-start font-ibm-mono text-[9px] text-[var(--c-text-muted)] hover:text-[var(--c-accent)] hover:border-[var(--c-accent)] transition-colors tracking-[1.5px]">
-                TEST CONNECTION /
-              </button>
-            </ConfigBlock>
+          <SectionLabel>OTHER SETTINGS — MOCKUP</SectionLabel>
+          <div className="p-5 border border-dashed border-[var(--c-border)] bg-[var(--c-bg-elev)]/40">
+            <p className="font-ibm-mono text-[10px] text-[var(--c-text-muted)] tracking-[0.5px] leading-relaxed">
+              NLP stopwords, scoring weights, exam timer, SMTP and SMS gateway sections
+              are not yet wired to a backend service. They require a new
+              <span className="text-[var(--c-accent)]"> ConfigService </span>
+              endpoint with persistence. Tracked separately.
+            </p>
           </div>
         </div>
       </div>
-
-      <SaveBar onSave={handleSave} />
     </div>
   );
 }

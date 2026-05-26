@@ -35,11 +35,23 @@ export default function RegisterPage() {
     return "";
   }
 
+  // Strip everything except digits and a leading '+'. Backend phone regex is
+  // ^\+?[0-9]{7,15}$ and rejects spaces, dashes, parens — sanitize before POST.
+  function sanitizePhone(raw: string): string {
+    const trimmed = raw.trim();
+    const hasPlus = trimmed.startsWith("+");
+    const digits = trimmed.replace(/\D/g, "");
+    return hasPlus ? `+${digits}` : digits;
+  }
+
   function handleStep1(e: React.FormEvent) {
     e.preventDefault();
     const nameErr = fullName.value.trim().length < 3 ? (isEn ? "FULL NAME REQUIRED (MIN 3 CHARS)" : "ሙሉ ስም ያስፈልጋል") : "";
     const emailErr = validateEmail(email.value);
-    const phoneErr = phone.value.trim().length < 9 ? (isEn ? "VALID PHONE NUMBER REQUIRED" : "ትክክለኛ ስልክ ቁጥር ያስፈልጋል") : "";
+    const cleanedPhone = sanitizePhone(phone.value);
+    const phoneErr = !/^\+?[0-9]{7,15}$/.test(cleanedPhone)
+      ? (isEn ? "PHONE MUST BE 7-15 DIGITS (E.G. +251911223344)" : "ስልክ ቁጥር 7-15 ቁጥሮች መሆን አለበት")
+      : "";
     setFullName((f) => ({ ...f, error: nameErr, touched: true }));
     setEmail((f) => ({ ...f, error: emailErr, touched: true }));
     setPhone((f) => ({ ...f, error: phoneErr, touched: true }));
@@ -56,10 +68,10 @@ export default function RegisterPage() {
     if (!passErr && !confirmErr) {
       setLoading(true);
       const { error: signUpError } = await authClient.signUp.email({
-        email: email.value,
+        email: email.value.trim(),
         password: password.value,
-        name: fullName.value,
-        phone: phone.value,
+        name: fullName.value.trim(),
+        phone: sanitizePhone(phone.value),
       });
       setLoading(false);
       if (signUpError) {
@@ -252,7 +264,7 @@ export default function RegisterPage() {
                 value={phone.value}
                 onChange={(v) => setPhone({ value: v, error: "", touched: false })}
                 type="tel"
-                placeholder="+251 9XX XXX XXX"
+                placeholder="+251911223344"
                 error={phone.error}
                 touched={phone.touched}
               />

@@ -50,6 +50,24 @@ public class UserStatusService {
             throw new BusinessException("Admins cannot modify Super Admin accounts");
         }
 
+        // Deactivation guards (footgun prevention)
+        if (!active) {
+            // 1. No self-deactivation — an admin nuking their own session is
+            //    almost always a mistake and leaves no way to undo.
+            if (requester.id().equals(targetId)) {
+                throw new BusinessException("You cannot deactivate your own account");
+            }
+            // 2. Never deactivate the last active SUPER_ADMIN — bricks the
+            //    system because no one can re-activate anyone.
+            if (target.getRole() == Role.SUPER_ADMIN) {
+                long activeSupers = userRepository.findByRoleOrderByCreatedAtDesc(Role.SUPER_ADMIN)
+                        .stream().filter(User::isActive).count();
+                if (activeSupers <= 1) {
+                    throw new BusinessException("Cannot deactivate the last active Super Admin");
+                }
+            }
+        }
+
         if (active) {
             target.activate();
             blockedUserCache.unblock(targetId);
