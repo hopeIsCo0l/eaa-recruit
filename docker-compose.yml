@@ -58,6 +58,21 @@ services:
     ports:
       - "8080:8080"
 
+  ollama:
+    image: ollama/ollama
+    container_name: eaa-ollama
+    profiles: ["ollama"]  # only starts with: docker compose --profile ollama up -d
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
   ai-service:
     build:
       context: ./ai-service
@@ -67,6 +82,9 @@ services:
       SPRING_CALLBACK_URL: http://backend:8080
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
       AI_SERVICE_PUBLIC_URL: ${AI_SERVICE_PUBLIC_URL:-http://ai-service:8000}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
     depends_on:
       redis:
         condition: service_healthy
@@ -102,3 +120,4 @@ services:
 
 volumes:
   pgdata:
+  ollama_data:
