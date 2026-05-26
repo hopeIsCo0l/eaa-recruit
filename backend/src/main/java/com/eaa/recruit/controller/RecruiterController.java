@@ -4,6 +4,7 @@ import com.eaa.recruit.dto.ApiResponse;
 import com.eaa.recruit.dto.availability.AvailabilitySlotBatchRequest;
 import com.eaa.recruit.dto.availability.AvailabilitySlotResponse;
 import com.eaa.recruit.dto.recruiter.DashboardEntryResponse;
+import com.eaa.recruit.dto.recruiter.RecruiterApplicationResponse;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsRecruiter;
 import com.eaa.recruit.service.AvailabilitySlotService;
@@ -60,13 +61,25 @@ public class RecruiterController {
     }
 
     /**
+     * GET /api/v1/recruiters/applications
+     * List all applications across the recruiter's job postings.
+     */
+    @GetMapping("/applications")
+    public ResponseEntity<ApiResponse<List<RecruiterApplicationResponse>>> listApplications(
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+
+        List<RecruiterApplicationResponse> apps = dashboardService.listApplications(principal);
+        return ResponseEntity.ok(ApiResponse.success(apps));
+    }
+
+    /**
      * GET /api/v1/recruiters/dashboard
      * FR-17: Paginated dashboard with application counts per job.
      */
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<Page<DashboardEntryResponse>>> getDashboard(
             @AuthenticationPrincipal AuthenticatedUser principal,
-            @PageableDefault(size = 20, sort = "totalApplications") Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable) {
 
         Page<DashboardEntryResponse> dashboard = dashboardService.getDashboard(principal, pageable);
         return ResponseEntity.ok(ApiResponse.success(dashboard));
