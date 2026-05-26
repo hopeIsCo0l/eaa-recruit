@@ -21,6 +21,9 @@ public record QuestionRequest(
         /** Zero-based index of the correct option. Required for MCQ. */
         Integer correctAnswer,
 
+        /** Model/ideal answer text. Required for SHORT_ANSWER. */
+        String idealAnswer,
+
         @NotNull(message = "marks is required")
         @Positive(message = "marks must be positive")
         Integer marks

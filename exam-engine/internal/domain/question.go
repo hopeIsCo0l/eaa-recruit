@@ -13,7 +13,8 @@ type Question struct {
 	Text          string       `json:"text"`
 	Type          QuestionType `json:"type"`
 	Options       []string     `json:"options,omitempty"` // MCQ only
-	CorrectAnswer string       `json:"correctAnswer"`     // never sent to candidate
+	CorrectAnswer string       `json:"correctAnswer"`     // MCQ: option index; never sent to candidate
+	IdealAnswer   string       `json:"idealAnswer"`       // SHORT_ANSWER: model answer for AI grading
 	Marks         float64      `json:"marks"`
 }
 

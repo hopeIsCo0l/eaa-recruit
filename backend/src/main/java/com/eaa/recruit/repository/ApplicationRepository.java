@@ -6,6 +6,7 @@ import com.eaa.recruit.repository.projection.DashboardProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -67,7 +68,9 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
                    a.hard_filter_passed AS hardFilterPassed,
                    a.submitted_at    AS submittedAt,
                    s.slot_date       AS interviewDate,
-                   s.start_time      AS interviewTime
+                   s.start_time      AS interviewTime,
+                   a.xai_report_url  AS xaiReportUrl,
+                   a.decision_notes  AS decisionNotes
             FROM applications a
             JOIN job_postings jp ON jp.id = a.job_id
             JOIN users u ON u.id = a.candidate_id
@@ -91,4 +94,9 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             ORDER BY jp.title
             """, nativeQuery = true)
     List<Object[]> findAnalyticsSummary();
+
+    // FR-35: set XAI report URL without optimistic lock conflict
+    @Modifying
+    @Query(value = "UPDATE applications SET xai_report_url = :url WHERE id = :id", nativeQuery = true)
+    void updateXaiReportUrl(@Param("id") Long id, @Param("url") String url);
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { XaiDownloadButton } from "@/components/XaiDownloadButton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BackendApp {
@@ -18,6 +19,8 @@ interface BackendApp {
   submittedAt: string;
   interviewDate: string | null;
   interviewTime: string | null;
+  xaiReportUrl: string | null;
+  decisionNotes: string | null;
 }
 
 interface Candidate {
@@ -32,6 +35,8 @@ interface Candidate {
   finalScore: number;
   hardFilterPassed: boolean | null;
   submittedAt: string;
+  xaiReportUrl: string | null;
+  decisionNotes: string | null;
 }
 
 function matchColor(score: number) {
@@ -146,19 +151,32 @@ function DetailModal({ candidate, onClose, onShortlist }: {
             </div>
           </div>
 
+          {/* Decision Notes */}
+          {candidate.decisionNotes && (
+            <div className="flex flex-col gap-1">
+              <span className="font-ibm-mono text-[9px] text-[var(--c-text-dim)] tracking-[1.5px]">DECISION NOTES</span>
+              <span className="font-ibm-mono text-[11px] text-[var(--c-text-muted)] leading-relaxed">
+                {candidate.decisionNotes}
+              </span>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex items-center justify-between pt-4 border-t border-[var(--c-border-soft)]">
             <span className="font-ibm-mono text-[9px] text-[var(--c-text-faint)] tracking-[0.5px]">
               Application #{candidate.id} — {candidate.jobTitle}
             </span>
-            {candidate.status === "EXAM_COMPLETED" && (
-              <button
-                onClick={() => { onShortlist(candidate.id); onClose(); }}
-                className="px-4 py-2 bg-[var(--c-accent)] font-ibm-mono text-[9px] font-bold text-[var(--c-text)] tracking-[1px] hover:bg-[var(--c-accent-hover)] transition-colors"
-              >
-                SHORTLIST /
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <XaiDownloadButton applicationId={candidate.id} />
+              {candidate.status === "EXAM_COMPLETED" && (
+                <button
+                  onClick={() => { onShortlist(candidate.id); onClose(); }}
+                  className="px-4 py-2 bg-[var(--c-accent)] font-ibm-mono text-[9px] font-bold text-[var(--c-text)] tracking-[1px] hover:bg-[var(--c-accent-hover)] transition-colors"
+                >
+                  SHORTLIST /
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -192,6 +210,8 @@ export default function CandidatesPage() {
         finalScore: a.finalScore ?? 0,
         hardFilterPassed: a.hardFilterPassed,
         submittedAt: a.submittedAt,
+        xaiReportUrl: a.xaiReportUrl,
+        decisionNotes: a.decisionNotes,
       }))
     );
     setLoading(false);

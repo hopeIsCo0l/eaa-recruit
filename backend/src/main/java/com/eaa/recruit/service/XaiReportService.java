@@ -8,14 +8,15 @@ import com.eaa.recruit.repository.ApplicationRepository;
 import com.eaa.recruit.security.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.http.HttpClient;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -30,11 +31,15 @@ public class XaiReportService {
 
     private final ApplicationRepository applicationRepository;
     private final XaiProperties         xaiProperties;
+    private final RestClient            downloadClient;
 
     public XaiReportService(ApplicationRepository applicationRepository,
                              XaiProperties xaiProperties) {
         this.applicationRepository = applicationRepository;
         this.xaiProperties         = xaiProperties;
+        var httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        this.downloadClient = RestClient.builder().requestFactory(requestFactory).build();
     }
 
     @Transactional(readOnly = true)
@@ -42,8 +47,15 @@ public class XaiReportService {
         Application application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
 
-        if (!application.getCandidate().getId().equals(principal.id())) {
-            throw new BusinessException("You can only access reports for your own applications");
+        String role = principal.role();
+        if ("CANDIDATE".equals(role)) {
+            if (!application.getCandidate().getId().equals(principal.id())) {
+                throw new BusinessException("You can only access reports for your own applications");
+            }
+        } else if ("RECRUITER".equals(role)) {
+            if (!application.getJob().getCreatedBy().getId().equals(principal.id())) {
+                throw new BusinessException("You can only access reports for applications on your jobs");
+            }
         }
 
         String reportUrl = application.getXaiReportUrl();
@@ -56,11 +68,16 @@ public class XaiReportService {
 
     private Resource resolveResource(String reportUrl) {
         if (reportUrl.startsWith("http://") || reportUrl.startsWith("https://")) {
-            try {
-                return new UrlResource(new URL(reportUrl));
-            } catch (MalformedURLException e) {
-                throw new BusinessException("Invalid XAI report URL");
+            // Proxy download from ai-service using HTTP/1.1
+            byte[] pdfBytes = downloadClient.get()
+                    .uri(reportUrl)
+                    .retrieve()
+                    .body(byte[].class);
+            if (pdfBytes == null || pdfBytes.length == 0) {
+                throw new BusinessException("XAI report download failed");
             }
+            log.info("Proxied XAI report from {} ({} bytes)", reportUrl, pdfBytes.length);
+            return new ByteArrayResource(pdfBytes);
         }
 
         // Local file path — resolve relative to configured reports dir

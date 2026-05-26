@@ -28,6 +28,10 @@ public class Question extends BaseEntity {
     @Column(name = "correct_answer")
     private Integer correctAnswer;
 
+    /** Model/ideal answer text — only set for SHORT_ANSWER questions. */
+    @Column(name = "ideal_answer", columnDefinition = "TEXT")
+    private String idealAnswer;
+
     @Column(name = "marks", nullable = false)
     private Integer marks;
 
@@ -37,13 +41,14 @@ public class Question extends BaseEntity {
     protected Question() {}
 
     private Question(Exam exam, QuestionType type, String questionText,
-                     String options, Integer correctAnswer,
+                     String options, Integer correctAnswer, String idealAnswer,
                      Integer marks, Integer displayOrder) {
         this.exam          = exam;
         this.type          = type;
         this.questionText  = questionText;
         this.options       = options;
         this.correctAnswer = correctAnswer;
+        this.idealAnswer   = idealAnswer;
         this.marks         = marks;
         this.displayOrder  = displayOrder;
     }
@@ -51,7 +56,13 @@ public class Question extends BaseEntity {
     public static Question create(Exam exam, QuestionType type, String questionText,
                                    String options, Integer correctAnswer,
                                    Integer marks, Integer displayOrder) {
-        return new Question(exam, type, questionText, options, correctAnswer, marks, displayOrder);
+        return new Question(exam, type, questionText, options, correctAnswer, null, marks, displayOrder);
+    }
+
+    public static Question create(Exam exam, QuestionType type, String questionText,
+                                   String options, Integer correctAnswer, String idealAnswer,
+                                   Integer marks, Integer displayOrder) {
+        return new Question(exam, type, questionText, options, correctAnswer, idealAnswer, marks, displayOrder);
     }
 
     public Exam         getExam()         { return exam; }
@@ -59,6 +70,7 @@ public class Question extends BaseEntity {
     public String       getQuestionText() { return questionText; }
     public String       getOptions()      { return options; }
     public Integer      getCorrectAnswer(){ return correctAnswer; }
+    public String       getIdealAnswer()  { return idealAnswer; }
     public Integer      getMarks()        { return marks; }
     public Integer      getDisplayOrder() { return displayOrder; }
 }

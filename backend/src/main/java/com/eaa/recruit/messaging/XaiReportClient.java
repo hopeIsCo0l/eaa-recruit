@@ -7,12 +7,14 @@ import com.eaa.recruit.repository.ApplicationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.net.http.HttpClient;
 import java.util.Map;
 
 /**
@@ -35,12 +37,23 @@ public class XaiReportClient {
     public XaiReportClient(@Value("${app.events.ai-service-url}") String aiServiceUrl,
                            @Value("${internal.api-key}") String internalApiKey,
                            ApplicationRepository applicationRepository) {
-        this.aiServiceClient       = RestClient.builder().baseUrl(aiServiceUrl).build();
+        var httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        this.aiServiceClient = RestClient.builder()
+                .baseUrl(aiServiceUrl)
+                .requestFactory(requestFactory)
+                .build();
         this.internalApiKey        = internalApiKey;
         this.applicationRepository = applicationRepository;
     }
 
+    /**
+     * Build XAI report asynchronously and store the download URL.
+     * Uses readOnly tx to load application data for payload,
+     * then native update query to avoid optimistic lock conflicts.
+     */
     @Async
+    @Transactional
     public void buildAndStore(Long applicationId) {
         Application application = applicationRepository.findById(applicationId).orElse(null);
         if (application == null) {
@@ -64,7 +77,7 @@ public class XaiReportClient {
             }
 
             String url = response.get("downloadUrl").toString();
-            persistUrl(applicationId, url);
+            applicationRepository.updateXaiReportUrl(applicationId, url);
             log.info("XAI report stored applicationId={} url={}", applicationId, url);
 
         } catch (RestClientException ex) {
@@ -94,13 +107,5 @@ public class XaiReportClient {
                 "recruiterNotes",    application.getDecisionNotes() == null
                                      ? "" : application.getDecisionNotes()
         );
-    }
-
-    @Transactional
-    public void persistUrl(Long applicationId, String url) {
-        applicationRepository.findById(applicationId).ifPresent(app -> {
-            app.updateXaiReportUrl(url);
-            applicationRepository.save(app);
-        });
     }
 }

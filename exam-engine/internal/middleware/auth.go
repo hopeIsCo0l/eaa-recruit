@@ -3,9 +3,11 @@ package middleware
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"hash"
 	"net/http"
 	"strings"
 	"time"
@@ -87,7 +89,7 @@ type tokenHeader struct {
 	Typ string `json:"typ"`
 }
 
-// verifyAndParse checks the HS256 signature and exp claim, then returns the claims.
+// verifyAndParse checks the HMAC signature (HS256 or HS512) and exp claim, then returns the claims.
 func verifyAndParse(token string, secret []byte) (tokenClaims, error) {
 	var claims tokenClaims
 
@@ -108,12 +110,19 @@ func verifyAndParse(token string, secret []byte) (tokenClaims, error) {
 	if err := json.Unmarshal(headerBytes, &header); err != nil {
 		return claims, fmt.Errorf("bad header json: %w", err)
 	}
-	if header.Alg != "HS256" {
+
+	var hashFunc func() hash.Hash
+	switch header.Alg {
+	case "HS256":
+		hashFunc = sha256.New
+	case "HS512":
+		hashFunc = sha512.New
+	default:
 		return claims, fmt.Errorf("unsupported alg: %s", header.Alg)
 	}
 
 	signingInput := parts[0] + "." + parts[1]
-	mac := hmac.New(sha256.New, secret)
+	mac := hmac.New(hashFunc, secret)
 	mac.Write([]byte(signingInput))
 	expected := mac.Sum(nil)
 

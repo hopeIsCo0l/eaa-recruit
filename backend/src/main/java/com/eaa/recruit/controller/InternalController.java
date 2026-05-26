@@ -72,15 +72,17 @@ public class InternalController {
     private Map<String, Object> toEnginePayload(Long examId, Question q) {
         List<String> options = parseOptions(q.getOptions());
         String correct = q.getCorrectAnswer() == null ? "" : String.valueOf(q.getCorrectAnswer());
-        return Map.of(
-                "id",            String.valueOf(q.getId()),
-                "examId",        String.valueOf(examId),
-                "text",          q.getQuestionText(),
-                "type",          q.getType().name(),
-                "options",       options,
-                "correctAnswer", correct,
-                "marks",         q.getMarks() == null ? 0 : q.getMarks()
-        );
+        String idealAnswer = q.getIdealAnswer() != null ? q.getIdealAnswer() : "";
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("id",            String.valueOf(q.getId()));
+        map.put("examId",        String.valueOf(examId));
+        map.put("text",          q.getQuestionText());
+        map.put("type",          q.getType().name());
+        map.put("options",       options);
+        map.put("correctAnswer", correct);
+        map.put("idealAnswer",   idealAnswer);
+        map.put("marks",         q.getMarks() == null ? 0 : q.getMarks());
+        return map;
     }
 
     private List<String> parseOptions(String json) {

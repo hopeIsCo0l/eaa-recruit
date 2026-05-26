@@ -5,9 +5,12 @@ import com.eaa.recruit.messaging.event.ExamBatchReadyEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+
+import java.net.http.HttpClient;
 
 /**
  * Fire-and-forget HTTP event delivery to downstream services.
@@ -25,8 +28,10 @@ public class EventPublisher {
     public EventPublisher(@Value("${app.events.ai-service-url}") String aiServiceUrl,
                           @Value("${app.events.exam-engine-url}") String examEngineUrl,
                           @Value("${internal.api-key}") String internalApiKey) {
-        this.aiServiceClient = RestClient.builder().baseUrl(aiServiceUrl).build();
-        this.examEngineClient = RestClient.builder().baseUrl(examEngineUrl).build();
+        var httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        this.aiServiceClient = RestClient.builder().baseUrl(aiServiceUrl).requestFactory(requestFactory).build();
+        this.examEngineClient = RestClient.builder().baseUrl(examEngineUrl).requestFactory(requestFactory).build();
         this.internalApiKey  = internalApiKey;
     }
 

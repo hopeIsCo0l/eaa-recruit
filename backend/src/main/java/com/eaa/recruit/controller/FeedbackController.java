@@ -63,8 +63,8 @@ public class FeedbackController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    /** GET /api/v1/applications/{id}/xai-report — FR-35 */
-    @IsCandidate
+    /** GET /api/v1/applications/{id}/xai-report — FR-35 (candidate + recruiter) */
+    @IsAuthenticated
     @GetMapping("/{id}/xai-report")
     public ResponseEntity<Resource> downloadXaiReport(
             @PathVariable("id") Long applicationId,
