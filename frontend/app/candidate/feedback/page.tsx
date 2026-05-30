@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   RadialBarChart, RadialBar, ResponsiveContainer, Cell,
@@ -47,7 +47,7 @@ type ApplicationSummary = {
   status:   string;
 };
 
-export default function FeedbackPage() {
+function FeedbackPageInner() {
   const searchParams = useSearchParams();
   const paramId = searchParams.get("applicationId");
 
@@ -85,7 +85,7 @@ export default function FeedbackPage() {
       apiFetch<Explanation>(`/api/v1/applications/${selectedId}/explanation`),
     ]).then(([feedbackRes, explanationRes]) => {
       setLoading(false);
-      if (feedbackRes.error) { setError(feedbackRes.error); return; }
+      if (feedbackRes.error) { setError(feedbackRes.error.message); return; }
       if (feedbackRes.data)  setReport(feedbackRes.data);
       if (explanationRes.data) setExplanation(explanationRes.data);
     });
@@ -353,5 +353,13 @@ export default function FeedbackPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function FeedbackPage() {
+  return (
+    <Suspense fallback={null}>
+      <FeedbackPageInner />
+    </Suspense>
   );
 }

@@ -49,14 +49,17 @@ services:
       MAIL_USER: ${MAIL_USER:-}
       MAIL_PASS: ${MAIL_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8081,http://localhost:5173}
+      XAI_REPORTS_DIR: ${XAI_REPORTS_DIR:-/xai-reports}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:9080,http://localhost:5173}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "9080:8080"
+    volumes:
+      - ./xai-reports:/xai-reports
 
   ollama:
     image: ollama/ollama
@@ -86,17 +89,19 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-recruitment}
+      PDF_STORAGE_DIR: ${PDF_STORAGE_DIR:-/xai-reports}
       HF_HUB_ENABLE_HF_TRANSFER: "0"
       HF_HUB_DISABLE_XET: "1"
     volumes:
       - hf_cache:/home/app/.cache/huggingface
+      - ./xai-reports:/xai-reports
     depends_on:
       redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "9000:8000"
 
   exam-engine:
     build:
@@ -113,7 +118,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8090:8090"
+      - "9090:8090"
 
   frontend:
     build:

@@ -1,13 +1,13 @@
 # EAA-Recruit — Final Project Document
 
-**College of Technology and Built Environment**  
-**School of Information Technology and Engineering**  
+**College of Technology and Built Environment**
+**School of Information Technology and Engineering**
 **Department of IT/SW Engineering**
 
 ---
 
-**Project:** EAA-Recruit — AI-Powered Recruitment Platform  
-**Version:** 2.0 (Final)  
+**Project:** EAA-Recruit — AI-Powered Recruitment Platform
+**Version:** 2.0 (Final)
 **Date:** May 2026
 
 ## Team Members
@@ -2352,6 +2352,6 @@ docker compose up -d
 
 ---
 
-*End of Final Project Document*  
-*EAA-Recruit — AI-Powered Recruitment Platform*  
+*End of Final Project Document*
+*EAA-Recruit — AI-Powered Recruitment Platform*
 *Addis Ababa University, May 2026*
