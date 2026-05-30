@@ -11,5 +11,6 @@ public record FeedbackReportResponse(
         Boolean hardFilterPassed,
         Double finalScore,
         String xaiReportUrl,
+        String xaiSummary,
         String decisionNotes
 ) {}

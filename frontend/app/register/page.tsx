@@ -8,6 +8,42 @@ import { authClient } from "@/lib/auth-client";
 type Field = { value: string; error: string; touched: boolean };
 const field = (value = ""): Field => ({ value, error: "", touched: false });
 
+// ⚠️ Defined OUTSIDE RegisterPage. Inline definition was recreating component
+// every render → input lost focus on every keystroke.
+type InputFieldProps = {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+  error?: string;
+  touched?: boolean;
+  rightEl?: React.ReactNode;
+};
+
+function InputField({ label, value, onChange, type = "text", placeholder, error, touched, rightEl }: InputFieldProps) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="font-ibm-mono text-[10px] text-[#666] tracking-[1.5px]">{label}</label>
+      <div className="relative">
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`w-full h-[48px] bg-[var(--c-bg-elev)] border px-4 pr-10 font-ibm-mono text-[13px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none transition-colors ${
+            touched && error ? "border-red-500/60 focus:border-red-500" : "border-[var(--c-border)] focus:border-[var(--c-accent)]"
+          }`}
+        />
+        {rightEl && <div className="absolute right-4 top-1/2 -translate-y-1/2">{rightEl}</div>}
+      </div>
+      {touched && error && (
+        <span className="font-ibm-mono text-[9px] text-red-400 tracking-[0.5px]">{error}</span>
+      )}
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [lang, setLang] = useState<"en" | "am">("en");
@@ -86,32 +122,6 @@ export default function RegisterPage() {
       router.push(`/verify-otp?email=${encodeURIComponent(email.value)}`);
     }
   }
-
-  const InputField = ({
-    label, value, onChange, type = "text", placeholder, error, touched, rightEl
-  }: {
-    label: string; value: string; onChange: (v: string) => void;
-    type?: string; placeholder?: string; error?: string; touched?: boolean; rightEl?: React.ReactNode;
-  }) => (
-    <div className="flex flex-col gap-2">
-      <label className="font-ibm-mono text-[10px] text-[#666] tracking-[1.5px]">{label}</label>
-      <div className="relative">
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={`w-full h-[48px] bg-[var(--c-bg-elev)] border px-4 pr-10 font-ibm-mono text-[13px] text-[var(--c-text)] placeholder-[var(--c-text-faint)] focus:outline-none transition-colors ${
-            touched && error ? "border-red-500/60 focus:border-red-500" : "border-[var(--c-border)] focus:border-[var(--c-accent)]"
-          }`}
-        />
-        {rightEl && <div className="absolute right-4 top-1/2 -translate-y-1/2">{rightEl}</div>}
-      </div>
-      {touched && error && (
-        <span className="font-ibm-mono text-[9px] text-red-400 tracking-[0.5px]">{error}</span>
-      )}
-    </div>
-  );
 
   const passwordStrength = (() => {
     const v = password.value;
