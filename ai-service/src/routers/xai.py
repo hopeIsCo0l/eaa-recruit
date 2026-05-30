@@ -13,31 +13,28 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from src.config import settings
-from src.services import cv_text_cache
-from src.services.attribution_service import explain_cv
+from src.services import semantic_explanation as sem_exp
 from src.services.justification_engine import JustificationInput, generate as generate_justification
 from src.services.pdf_generator import STORAGE_DIR, generate_pdf
 from src.utils.auth import verify_internal_api_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/xai", dependencies=[Depends(verify_internal_api_key)])
-# Separate router for public download (Spring proxies the download with its own auth)
 public_router = APIRouter(prefix="/api/v1/xai")
 
 
 class XaiReportRequest(BaseModel):
-    applicationId:    int = Field(gt=0)
-    candidateName:    str = Field(min_length=1, max_length=256)
-    jobTitle:         str = Field(min_length=1, max_length=256)
-    jobDescription:   str = Field(min_length=1, max_length=20_000)
-    cvText:           str | None = Field(default=None, max_length=50_000,
-                                          description="Optional. Falls back to Redis cv-text:{appId}.")
+    applicationId:    int   = Field(gt=0)
+    jobId:            int   = Field(gt=0)
+    candidateName:    str   = Field(min_length=1, max_length=256)
+    jobTitle:         str   = Field(min_length=1, max_length=256)
+    jobDescription:   str   = Field(min_length=1, max_length=20_000)
     cvScore:          float = Field(ge=0, le=100)
     examScore:        float = Field(ge=0, le=100)
     hardFilterPassed: bool
     finalScore:       float = Field(ge=0, le=100)
+    decision:         str   = Field(default="UNKNOWN", max_length=20)
     recruiterNotes:   str | None = Field(default=None, max_length=5_000)
-    limeSamples:      int = Field(default=300, ge=50, le=2000)
 
 
 class XaiReportResponse(BaseModel):
@@ -55,24 +52,42 @@ def _public_base() -> str:
 def build_report(body: XaiReportRequest) -> XaiReportResponse:
     logger.info("XAI report build requested applicationId=%s", body.applicationId)
 
-    cv_text = body.cvText or cv_text_cache.get(body.applicationId)
-    if not cv_text:
-        # Fallback: use job description as proxy context for LIME attribution
-        logger.warning("No cached CV text for applicationId=%s — using job description as proxy", body.applicationId)
-        cv_text = f"Candidate: {body.candidateName}. Applied for: {body.jobTitle}. {body.jobDescription}"
+    # Step 1: semantic explanation from pgvector
+    explanation = sem_exp.explain(body.applicationId, body.jobId)
 
-    attribution    = explain_cv(cv_text, body.jobDescription, num_samples=body.limeSamples)
-    justification  = generate_justification(JustificationInput(
+    # Step 2: Qwen generates plain-text reason from alignment pairs
+    qwen_reason = ""
+    if explanation.available and settings.ollama_enabled:
+        try:
+            from src.services.ollama_scoring import generate_xai_reason
+            qwen_reason = generate_xai_reason(
+                explanation=explanation,
+                job_title=body.jobTitle,
+                decision=body.decision,
+                cv_score=body.cvScore,
+                exam_score=body.examScore,
+                final_score=body.finalScore,
+                hard_filter_passed=body.hardFilterPassed,
+                recruiter_notes=body.recruiterNotes,
+            )
+        except Exception as exc:
+            logger.warning("Qwen XAI reason failed — using template fallback: %s", exc)
+
+    # Step 3: justification paragraphs
+    justification = generate_justification(JustificationInput(
         candidate_name=body.candidateName,
         job_title=body.jobTitle,
         cv_score=body.cvScore,
         exam_score=body.examScore,
         hard_filter_passed=body.hardFilterPassed,
         final_score=body.finalScore,
-        attribution=attribution,
+        explanation=explanation,
+        decision=body.decision,
+        qwen_reason=qwen_reason,
         recruiter_notes=body.recruiterNotes,
     ))
 
+    # Step 4: generate PDF
     pdf_path = generate_pdf(
         application_id=str(body.applicationId),
         candidate_name=body.candidateName,
@@ -81,7 +96,7 @@ def build_report(body: XaiReportRequest) -> XaiReportResponse:
         exam_score=body.examScore,
         final_score=body.finalScore,
         hard_filter_passed=body.hardFilterPassed,
-        attribution=attribution,
+        explanation=explanation,
         justification=justification,
         recruiter_notes=body.recruiterNotes,
     )
@@ -92,6 +107,41 @@ def build_report(body: XaiReportRequest) -> XaiReportResponse:
         pdfPath=str(pdf_path),
         downloadUrl=download_url,
         summary=justification.summary,
+    )
+
+
+class AlignmentPairOut(BaseModel):
+    cv_chunk:   str
+    jd_chunk:   str
+    similarity: float
+
+
+class ExplanationResponse(BaseModel):
+    applicationId:  int
+    jobId:          int
+    available:      bool
+    strongMatches:  list[AlignmentPairOut]
+    weakMatches:    list[AlignmentPairOut]
+    gaps:           list[str]
+
+
+@router.get("/explanation/{application_id}/{job_id}", response_model=ExplanationResponse)
+def get_explanation(application_id: int, job_id: int) -> ExplanationResponse:
+    """Return semantic alignment pairs for a given application — used by the frontend."""
+    explanation = sem_exp.explain(application_id, job_id)
+    return ExplanationResponse(
+        applicationId=application_id,
+        jobId=job_id,
+        available=explanation.available,
+        strongMatches=[
+            AlignmentPairOut(cv_chunk=p.cv_chunk, jd_chunk=p.jd_chunk, similarity=p.similarity)
+            for p in explanation.strong_matches
+        ],
+        weakMatches=[
+            AlignmentPairOut(cv_chunk=p.cv_chunk, jd_chunk=p.jd_chunk, similarity=p.similarity)
+            for p in explanation.weak_matches
+        ],
+        gaps=explanation.gaps,
     )
 
 

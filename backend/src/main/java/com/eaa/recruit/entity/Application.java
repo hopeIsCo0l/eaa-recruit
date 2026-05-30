@@ -55,6 +55,9 @@ public class Application extends BaseEntity {
     @Column(name = "xai_report_url", length = 500)
     private String xaiReportUrl;
 
+    @Column(name = "xai_summary", columnDefinition = "TEXT")
+    private String xaiSummary;
+
     @Column(name = "exam_token", length = 36)
     private String examToken;
 
@@ -106,6 +109,7 @@ public class Application extends BaseEntity {
     public Double            getFinalScore()       { return finalScore; }
     public ApplicationStatus getStatus()           { return status; }
     public String            getXaiReportUrl()     { return xaiReportUrl; }
+    public String            getXaiSummary()       { return xaiSummary; }
     public String            getExamToken()        { return examToken; }
     public Instant           getSubmittedAt()      { return submittedAt; }
     public Instant           getExamCompletedAt()  { return examCompletedAt; }
