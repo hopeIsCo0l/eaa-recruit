@@ -85,12 +85,15 @@ services:
       OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-recruitment}
       HF_HUB_ENABLE_HF_TRANSFER: "0"
       HF_HUB_DISABLE_XET: "1"
     volumes:
       - hf_cache:/home/app/.cache/huggingface
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     ports:
       - "8000:8000"

@@ -269,3 +269,89 @@ def is_available() -> bool:
             return res.is_success
     except httpx.HTTPError:
         return False
+
+
+# ─── XAI REASON GENERATION ────────────────────────────────────────────────────
+
+XAI_SYSTEM = """You are an expert aviation recruitment analyst.
+You explain hiring decisions in clear, professional language.
+Be factual, concise, and specific. Do not use bullet points — write flowing paragraphs.
+You MUST respond with plain text only — no JSON, no markdown."""
+
+XAI_PROMPT_TEMPLATE = """A candidate applied for the position of "{job_title}" and was {decision}.
+
+Based on the semantic analysis of their CV against the job requirements, here is what was found:
+
+STRONG MATCHES (CV clearly addressed these requirements):
+{strong_matches}
+
+PARTIAL MATCHES (CV loosely addressed these requirements):
+{weak_matches}
+
+GAPS (Requirements not addressed in the CV):
+{gaps}
+
+CV Relevance Score: {cv_score:.1f}/100
+Technical Exam Score: {exam_score:.1f}/100
+Final Weighted Score: {final_score:.1f}/100
+Eligibility Check: {eligibility}
+{recruiter_section}
+
+Write a 3-4 sentence professional explanation of why this candidate was {decision}.
+Be specific — reference the actual matched requirements and gaps above.
+Do not repeat the scores verbatim. Focus on the qualitative picture."""
+
+
+def generate_xai_reason(
+    explanation,   # SemanticExplanation
+    job_title: str,
+    decision: str,
+    cv_score: float,
+    exam_score: float,
+    final_score: float,
+    hard_filter_passed: bool,
+    recruiter_notes: Optional[str] = None,
+) -> str:
+    """
+    Generate a plain-text XAI reason paragraph via Qwen.
+
+    Returns empty string if Ollama is unavailable — caller falls back to template text.
+    """
+    if not settings.ollama_enabled or not is_available():
+        return ""
+
+    def _fmt_list(items, attr="jd_chunk") -> str:
+        if not items:
+            return "None"
+        return "\n".join(f"- {getattr(i, attr) if hasattr(i, attr) else i}" for i in items[:5])
+
+    strong_str = _fmt_list(explanation.strong_matches, "jd_chunk")
+    weak_str   = _fmt_list(explanation.weak_matches,   "jd_chunk")
+    gaps_str   = _fmt_list(explanation.gaps) if explanation.gaps else "None"
+    eligibility = "PASSED" if hard_filter_passed else "FAILED (mandatory criteria not met)"
+    recruiter_section = (
+        f"\nRecruiter Notes: {recruiter_notes.strip()}" if recruiter_notes and recruiter_notes.strip()
+        else ""
+    )
+
+    prompt = XAI_PROMPT_TEMPLATE.format(
+        job_title=job_title,
+        decision=decision.upper(),
+        strong_matches=strong_str,
+        weak_matches=weak_str,
+        gaps=gaps_str,
+        cv_score=cv_score,
+        exam_score=exam_score,
+        final_score=final_score,
+        eligibility=eligibility,
+        recruiter_section=recruiter_section,
+    )
+
+    response = _generate(prompt=prompt, system=XAI_SYSTEM, temperature=0.2)
+    if not response:
+        logger.warning("Qwen XAI reason generation returned None")
+        return ""
+
+    reason = response.strip()
+    logger.info("Qwen XAI reason generated (%d chars)", len(reason))
+    return reason

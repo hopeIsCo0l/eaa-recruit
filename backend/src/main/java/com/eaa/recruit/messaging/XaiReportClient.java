@@ -97,6 +97,7 @@ public class XaiReportClient {
 
         return Map.of(
                 "applicationId",     application.getId(),
+                "jobId",             job.getId(),
                 "candidateName",     candidate.getFullName(),
                 "jobTitle",          job.getTitle(),
                 "jobDescription",    job.getDescription(),
@@ -104,6 +105,8 @@ public class XaiReportClient {
                 "examScore",         examPct != null ? examPct : 0.0,
                 "hardFilterPassed",  Boolean.TRUE.equals(passed),
                 "finalScore",        finalPct != null ? finalPct : 0.0,
+                "decision",          application.getStatus() != null
+                                     ? application.getStatus().name() : "UNKNOWN",
                 "recruiterNotes",    application.getDecisionNotes() == null
                                      ? "" : application.getDecisionNotes()
         );
