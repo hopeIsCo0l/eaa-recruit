@@ -14,6 +14,11 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
     List<JobPosting> findByStatus(JobPostingStatus status);
 
+    // Used by candidate-facing listing — jobs are visible to candidates while
+    // OPEN or EXAM_SCHEDULED (after a recruiter sets the exam date they should
+    // still be applyable until the close date).
+    List<JobPosting> findByStatusIn(List<JobPostingStatus> statuses);
+
     List<JobPosting> findByCreatedById(Long recruiterId);
 
     Optional<JobPosting> findByIdAndCreatedById(Long id, Long recruiterId);

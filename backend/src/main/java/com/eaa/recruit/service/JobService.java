@@ -10,6 +10,8 @@ import com.eaa.recruit.entity.JobPostingStatus;
 import com.eaa.recruit.entity.User;
 import com.eaa.recruit.exception.BusinessException;
 import com.eaa.recruit.exception.ResourceNotFoundException;
+import com.eaa.recruit.messaging.JobRelevanceClient;
+import com.eaa.recruit.messaging.JobRelevanceClient.RelevanceResult;
 import com.eaa.recruit.repository.JobPostingRepository;
 import com.eaa.recruit.repository.UserRepository;
 import com.eaa.recruit.security.AuthenticatedUser;
@@ -25,18 +27,45 @@ public class JobService {
 
     private static final Logger log = LoggerFactory.getLogger(JobService.class);
 
+    // Minimum LLM confidence to actually block a job. The local qwen2.5:1.5b
+    // model is hedged and rarely reports >0.5 even on clear-cut cases, so we
+    // gate at 0.5 inclusive. Tunable up if the model is upgraded to a larger one.
+    private static final double RELEVANCE_BLOCK_CONFIDENCE = 0.5;
+
     private final JobPostingRepository jobPostingRepository;
     private final UserRepository       userRepository;
+    private final JobRelevanceClient   jobRelevanceClient;
 
     public JobService(JobPostingRepository jobPostingRepository,
-                      UserRepository userRepository) {
+                      UserRepository userRepository,
+                      JobRelevanceClient jobRelevanceClient) {
         this.jobPostingRepository = jobPostingRepository;
         this.userRepository       = userRepository;
+        this.jobRelevanceClient   = jobRelevanceClient;
     }
 
     @Transactional
     public CreateJobResponse createJob(CreateJobRequest request, AuthenticatedUser principal) {
         validateDateOrdering(request);
+
+        // FR-NEW: aviation-domain gate. Ollama checks if the job description
+        // is in EAA's domain (airlines, aviation academy, MRO, ATC, etc.).
+        // If the LLM is confident the description is off-domain, reject creation
+        // with the LLM's reason so the recruiter sees why.
+        RelevanceResult verdict = jobRelevanceClient.check(
+                request.title(), request.description(), request.requiredDegree());
+
+        if (!verdict.relevant()
+                && verdict.isOllamaBacked()
+                && verdict.confidence() >= RELEVANCE_BLOCK_CONFIDENCE) {
+            log.warn("Job creation blocked — non-aviation description. recruiterId={} title='{}' reason='{}'",
+                    principal.id(), request.title(), verdict.reason());
+            throw new BusinessException(
+                    "Job description appears non-aviation (" + verdict.category() + "). "
+                            + verdict.reason()
+                            + " Adjust the description so it clearly relates to Ethiopian Airlines "
+                            + "or the Ethiopian Aviation Academy domain, then try again.");
+        }
 
         User recruiter = userRepository.findById(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Recruiter not found"));
@@ -68,7 +97,11 @@ public class JobService {
 
     @Transactional(readOnly = true)
     public List<JobResponse> listOpenJobs() {
-        return jobPostingRepository.findByStatus(JobPostingStatus.OPEN)
+        // Candidates should see both OPEN and EXAM_SCHEDULED jobs — the latter
+        // is still applyable until the close date; the only difference is that
+        // an exam window has been pinned. CLOSED / ARCHIVED / DRAFT are hidden.
+        return jobPostingRepository.findByStatusIn(
+                List.of(JobPostingStatus.OPEN, JobPostingStatus.EXAM_SCHEDULED))
                 .stream().map(JobService::toResponse).toList();
     }
 

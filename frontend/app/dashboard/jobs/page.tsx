@@ -66,6 +66,77 @@ function statusActions(s: string): { action: string; label: string; color: strin
   }
 }
 
+// ⚠️ Top-level component — was defined inside JobsPage which recreated it
+// every render, killing input focus on every keystroke.
+function JobFormFields({
+  f,
+  setF,
+  err,
+}: {
+  f: typeof emptyForm;
+  setF: <K extends keyof typeof emptyForm>(k: K, v: string) => void;
+  err: string | null;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">JOB TITLE *</label>
+          <input type="text" value={f.title} onChange={(e) => setF("title", e.target.value)}
+            placeholder="e.g. Senior First Officer"
+            className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] placeholder:text-[var(--c-text-faint)] transition-colors tracking-[0.5px]" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">REQUIRED DEGREE *</label>
+          <input type="text" value={f.requiredDegree} onChange={(e) => setF("requiredDegree", e.target.value)}
+            placeholder="e.g. BSc Aeronautical Engineering"
+            className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] placeholder:text-[var(--c-text-faint)] transition-colors tracking-[0.5px]" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">MIN HEIGHT (CM)</label>
+            <input type="number" min={1} value={f.minHeightCm} onChange={(e) => setF("minHeightCm", e.target.value)}
+              className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] transition-colors tracking-[0.5px]" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">MIN WEIGHT (KG)</label>
+            <input type="number" min={1} value={f.minWeightKg} onChange={(e) => setF("minWeightKg", e.target.value)}
+              className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] transition-colors tracking-[0.5px]" />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 md:col-span-2">
+          <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">JOB DESCRIPTION *</label>
+          <textarea rows={5} value={f.description} onChange={(e) => setF("description", e.target.value)}
+            placeholder="Paste or type the full job description — the AI parses this to score candidate CVs."
+            className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] placeholder:text-[var(--c-text-faint)] resize-none transition-colors tracking-[0.5px] leading-relaxed" />
+        </div>
+      </div>
+
+      <SectionLabel index="B">DATES</SectionLabel>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {([["openDate", "OPEN DATE *"], ["closeDate", "CLOSE DATE *"], ["examDate", "EXAM DATE *"]] as const).map(
+          ([key, label]) => (
+            <div key={key} className="flex flex-col gap-2">
+              <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">{label}</label>
+              <input type="date" value={f[key]} onChange={(e) => setF(key, e.target.value)}
+                className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] transition-colors tracking-[0.5px]" />
+            </div>
+          )
+        )}
+      </div>
+
+      {err && (
+        <div className="mb-4 px-3 py-2 border border-[var(--c-warn)]/40 bg-[var(--c-warn)]/08">
+          <span className="font-ibm-mono text-[10px] text-[var(--c-warn)] tracking-[0.5px]">{err}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function JobsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -196,75 +267,7 @@ export default function JobsPage() {
     fetchJobs();
   };
 
-  // ─── Form fields component ─────────────────────────────────────────
-  function JobFormFields({
-    f,
-    setF,
-    err,
-  }: {
-    f: typeof emptyForm;
-    setF: <K extends keyof typeof emptyForm>(k: K, v: string) => void;
-    err: string | null;
-  }) {
-    return (
-      <>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="flex flex-col gap-2 md:col-span-2">
-            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">JOB TITLE *</label>
-            <input type="text" value={f.title} onChange={(e) => setF("title", e.target.value)}
-              placeholder="e.g. Senior First Officer"
-              className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] placeholder:text-[var(--c-text-faint)] transition-colors tracking-[0.5px]" />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">REQUIRED DEGREE *</label>
-            <input type="text" value={f.requiredDegree} onChange={(e) => setF("requiredDegree", e.target.value)}
-              placeholder="e.g. BSc Aeronautical Engineering"
-              className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] placeholder:text-[var(--c-text-faint)] transition-colors tracking-[0.5px]" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">MIN HEIGHT (CM)</label>
-              <input type="number" min={1} value={f.minHeightCm} onChange={(e) => setF("minHeightCm", e.target.value)}
-                className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] transition-colors tracking-[0.5px]" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">MIN WEIGHT (KG)</label>
-              <input type="number" min={1} value={f.minWeightKg} onChange={(e) => setF("minWeightKg", e.target.value)}
-                className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] transition-colors tracking-[0.5px]" />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 md:col-span-2">
-            <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">JOB DESCRIPTION *</label>
-            <textarea rows={5} value={f.description} onChange={(e) => setF("description", e.target.value)}
-              placeholder="Paste or type the full job description — the AI parses this to score candidate CVs."
-              className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] placeholder:text-[var(--c-text-faint)] resize-none transition-colors tracking-[0.5px] leading-relaxed" />
-          </div>
-        </div>
-
-        <SectionLabel index="B">DATES</SectionLabel>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {([["openDate", "OPEN DATE *"], ["closeDate", "CLOSE DATE *"], ["examDate", "EXAM DATE *"]] as const).map(
-            ([key, label]) => (
-              <div key={key} className="flex flex-col gap-2">
-                <label className="font-ibm-mono text-[9px] text-[var(--c-text-muted)] tracking-[1.5px]">{label}</label>
-                <input type="date" value={f[key]} onChange={(e) => setF(key, e.target.value)}
-                  className="bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] font-ibm-mono text-[11px] px-3 py-2 focus:outline-none focus:border-[var(--c-accent)] transition-colors tracking-[0.5px]" />
-              </div>
-            )
-          )}
-        </div>
-
-        {err && (
-          <div className="mb-4 px-3 py-2 border border-[var(--c-warn)]/40 bg-[var(--c-warn)]/08">
-            <span className="font-ibm-mono text-[10px] text-[var(--c-warn)] tracking-[0.5px]">{err}</span>
-          </div>
-        )}
-      </>
-    );
-  }
+  // JobFormFields moved OUTSIDE component (see top of file) to avoid focus-loss on every keystroke.
 
   return (
     <div className="p-6 md:p-8 max-w-[1400px] mx-auto">

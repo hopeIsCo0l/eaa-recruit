@@ -64,7 +64,10 @@ public class ApplicationService {
         JobPosting job = jobPostingRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
 
-        if (job.getStatus() != JobPostingStatus.OPEN) {
+        // Allow applications while job is OPEN or has an exam scheduled — both
+        // states are still applyable until close_date. Reject DRAFT/CLOSED/ARCHIVED.
+        if (job.getStatus() != JobPostingStatus.OPEN
+                && job.getStatus() != JobPostingStatus.EXAM_SCHEDULED) {
             throw new BusinessException("Applications are only accepted for OPEN jobs");
         }
 
