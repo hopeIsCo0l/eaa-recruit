@@ -53,7 +53,7 @@ public class FeedbackReportService {
                 application.getHardFilterPassed(),
                 application.getFinalScore(),
                 application.getXaiReportUrl(),
-                // Candidates see decision notes (it's their own feedback); recruiters see all
+                application.getXaiSummary(),
                 application.getDecisionNotes());
     }
 }

@@ -76,9 +76,10 @@ public class XaiReportClient {
                 return;
             }
 
-            String url = response.get("downloadUrl").toString();
-            applicationRepository.updateXaiReportUrl(applicationId, url);
-            log.info("XAI report stored applicationId={} url={}", applicationId, url);
+            String url     = response.get("downloadUrl").toString();
+            String summary = response.get("summary") != null ? response.get("summary").toString() : "";
+            applicationRepository.updateXaiReportUrlAndSummary(applicationId, url, summary);
+            log.info("XAI report stored applicationId={} url={} summaryLen={}", applicationId, url, summary.length());
 
         } catch (RestClientException ex) {
             log.error("XAI build call failed applicationId={}: {}", applicationId, ex.getMessage(), ex);
@@ -97,6 +98,7 @@ public class XaiReportClient {
 
         return Map.of(
                 "applicationId",     application.getId(),
+                "jobId",             job.getId(),
                 "candidateName",     candidate.getFullName(),
                 "jobTitle",          job.getTitle(),
                 "jobDescription",    job.getDescription(),
@@ -104,6 +106,8 @@ public class XaiReportClient {
                 "examScore",         examPct != null ? examPct : 0.0,
                 "hardFilterPassed",  Boolean.TRUE.equals(passed),
                 "finalScore",        finalPct != null ? finalPct : 0.0,
+                "decision",          application.getStatus() != null
+                                     ? application.getStatus().name() : "UNKNOWN",
                 "recruiterNotes",    application.getDecisionNotes() == null
                                      ? "" : application.getDecisionNotes()
         );

@@ -75,10 +75,31 @@ def _process_cv(req: ScoreCvRequest) -> None:
         post_ai_score(req.applicationId, 0.0, f"failed:score:{req.applicationId}")
         return
 
-    # XAI report (LIME + PDF) is generated post-exam via /api/v1/xai/report,
-    # not here — we only have CV-stage data at this point. Pending until then.
     xai_url = f"pending:{req.applicationId}"
     post_ai_score(req.applicationId, score_unit, xai_url)
+
+    # Store CV and JD chunk embeddings in pgvector for semantic XAI explanation.
+    # Runs after the callback so a storage failure never blocks the score result.
+    try:
+        from src.services.cv_chunker import chunk_cv, chunk_jd
+        from src.services.embedding_service import embed_batch
+        from src.db.pgvector_store import store_cv_chunks, store_jd_chunks
+
+        cv_chunks = chunk_cv(preprocessed)
+        if cv_chunks:
+            cv_vectors = embed_batch(cv_chunks)
+            store_cv_chunks(req.applicationId, cv_chunks, cv_vectors)
+
+        jd_chunks = chunk_jd(req.jobDescription)
+        if jd_chunks:
+            jd_vectors = embed_batch(jd_chunks)
+            store_jd_chunks(req.jobId, jd_chunks, jd_vectors)
+
+    except Exception as exc:
+        logger.warning(
+            "Chunk embedding storage failed applicationId=%s — XAI explanation will be unavailable: %s",
+            req.applicationId, exc,
+        )
 
 
 def _safe_process_cv(req: ScoreCvRequest) -> None:

@@ -3,11 +3,13 @@ package com.eaa.recruit.controller;
 import com.eaa.recruit.dto.ApiResponse;
 import com.eaa.recruit.dto.application.DecisionRequest;
 import com.eaa.recruit.dto.application.DecisionResponse;
+import com.eaa.recruit.dto.application.ExplanationResponse;
 import com.eaa.recruit.dto.application.FeedbackReportResponse;
 import com.eaa.recruit.security.AuthenticatedUser;
 import com.eaa.recruit.security.rbac.IsAuthenticated;
 import com.eaa.recruit.security.rbac.IsCandidate;
 import com.eaa.recruit.security.rbac.IsRecruiter;
+import com.eaa.recruit.service.ExplanationService;
 import com.eaa.recruit.service.FeedbackReportService;
 import com.eaa.recruit.service.FinalDecisionService;
 import com.eaa.recruit.service.XaiReportService;
@@ -31,13 +33,16 @@ public class FeedbackController {
     private final FinalDecisionService   finalDecisionService;
     private final FeedbackReportService  feedbackReportService;
     private final XaiReportService       xaiReportService;
+    private final ExplanationService     explanationService;
 
     public FeedbackController(FinalDecisionService finalDecisionService,
                                FeedbackReportService feedbackReportService,
-                               XaiReportService xaiReportService) {
+                               XaiReportService xaiReportService,
+                               ExplanationService explanationService) {
         this.finalDecisionService  = finalDecisionService;
         this.feedbackReportService = feedbackReportService;
         this.xaiReportService      = xaiReportService;
+        this.explanationService    = explanationService;
     }
 
     /** POST /api/v1/applications/{id}/decision — FR-33 */
@@ -60,6 +65,17 @@ public class FeedbackController {
             @AuthenticationPrincipal AuthenticatedUser principal) {
 
         FeedbackReportResponse response = feedbackReportService.getFeedback(applicationId, principal);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /** GET /api/v1/applications/{id}/explanation — semantic alignment pairs from pgvector */
+    @IsAuthenticated
+    @GetMapping("/{id}/explanation")
+    public ResponseEntity<ApiResponse<ExplanationResponse>> getExplanation(
+            @PathVariable("id") Long applicationId,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+
+        ExplanationResponse response = explanationService.getExplanation(applicationId, principal);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

@@ -1,9 +1,9 @@
 # Test Plan Documentation (TPD)
 
-**Project:** EAA-Recruit &mdash; AI-Powered Recruitment Platform  
-**Version:** 1.0  
-**Date:** 2026-05-26  
-**Prepared by:** QA Team  
+**Project:** EAA-Recruit &mdash; AI-Powered Recruitment Platform
+**Version:** 1.0
+**Date:** 2026-05-26
+**Prepared by:** QA Team
 **Status:** Active
 
 ---
@@ -744,7 +744,7 @@ docker compose ps
   NEW --> OPEN --> IN PROGRESS --> FIXED --> VERIFIED --> CLOSED
    |                  |                        |
    +-> DUPLICATE      +-> DEFERRED             +-> REOPENED -> IN PROGRESS
-   +-> REJECTED                                         
+    +-> REJECTED
 ```
 
 ### 10.2 Severity Levels
