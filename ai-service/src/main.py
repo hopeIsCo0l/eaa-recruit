@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from src.routers import bias, cv_scoring, grading, health, ranking, scoring_test, xai
+from src.routers import bias, cv_scoring, grading, health, job_relevance, ranking, scoring_test, xai
 from src.services.embedding_service import load_model
 
 logging.basicConfig(
@@ -99,3 +99,4 @@ app.include_router(grading.router)
 app.include_router(xai.router)
 app.include_router(xai.public_router)
 app.include_router(scoring_test.router)
+app.include_router(job_relevance.router)
