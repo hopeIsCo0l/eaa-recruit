@@ -95,8 +95,12 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             """, nativeQuery = true)
     List<Object[]> findAnalyticsSummary();
 
-    // FR-35: set XAI report URL without optimistic lock conflict
+    // FR-35: set XAI report URL and summary without optimistic lock conflict
     @Modifying
     @Query(value = "UPDATE applications SET xai_report_url = :url WHERE id = :id", nativeQuery = true)
     void updateXaiReportUrl(@Param("id") Long id, @Param("url") String url);
+
+    @Modifying
+    @Query(value = "UPDATE applications SET xai_report_url = :url, xai_summary = :summary WHERE id = :id", nativeQuery = true)
+    void updateXaiReportUrlAndSummary(@Param("id") Long id, @Param("url") String url, @Param("summary") String summary);
 }

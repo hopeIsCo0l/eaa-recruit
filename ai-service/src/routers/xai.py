@@ -110,6 +110,41 @@ def build_report(body: XaiReportRequest) -> XaiReportResponse:
     )
 
 
+class AlignmentPairOut(BaseModel):
+    cv_chunk:   str
+    jd_chunk:   str
+    similarity: float
+
+
+class ExplanationResponse(BaseModel):
+    applicationId:  int
+    jobId:          int
+    available:      bool
+    strongMatches:  list[AlignmentPairOut]
+    weakMatches:    list[AlignmentPairOut]
+    gaps:           list[str]
+
+
+@router.get("/explanation/{application_id}/{job_id}", response_model=ExplanationResponse)
+def get_explanation(application_id: int, job_id: int) -> ExplanationResponse:
+    """Return semantic alignment pairs for a given application — used by the frontend."""
+    explanation = sem_exp.explain(application_id, job_id)
+    return ExplanationResponse(
+        applicationId=application_id,
+        jobId=job_id,
+        available=explanation.available,
+        strongMatches=[
+            AlignmentPairOut(cv_chunk=p.cv_chunk, jd_chunk=p.jd_chunk, similarity=p.similarity)
+            for p in explanation.strong_matches
+        ],
+        weakMatches=[
+            AlignmentPairOut(cv_chunk=p.cv_chunk, jd_chunk=p.jd_chunk, similarity=p.similarity)
+            for p in explanation.weak_matches
+        ],
+        gaps=explanation.gaps,
+    )
+
+
 @public_router.get("/report/{application_id}")
 def get_report(application_id: int) -> FileResponse:
     pdf_path = Path(STORAGE_DIR) / f"{application_id}_feedback.pdf"
